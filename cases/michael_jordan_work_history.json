@@ -1,0 +1,62 @@
+{
+    "client_name": "Michael Jordan",
+    "saved_at": "2026-05-16 15:27:04",
+    "jobs": [
+        {
+            "job_title": "Cook",
+            "employer": "Mcdonalds",
+            "dates_worked": "1/2025-1/2026",
+            "hours_per_day": "8 ",
+            "days_per_week": "5",
+            "pay_rate": "20",
+            "job_duties": "Cooked and cleaned",
+            "lifting": "5 lbs a day",
+            "standing_walking": "standing/walking 5 hrs a day",
+            "interacted_with_people": "No",
+            "used_machines_tools": "No",
+            "physical_activities": {
+                "standing_walking": "yes",
+                "sitting": "no",
+                "stooping": "yes",
+                "kneeling": "no",
+                "crouching": "no",
+                "crawling": "yes",
+                "fingers_time": "yes",
+                "fingers_one_hand": false,
+                "fingers_both_hands": true,
+                "grasping_time": "yes",
+                "grasping_one_hand": false,
+                "grasping_both_hands": true,
+                "reaching_below_time": "yes",
+                "reaching_below_one_arm": false,
+                "reaching_below_both_arms": true,
+                "reaching_overhead_time": "yes",
+                "reaching_overhead_one_arm": false,
+                "reaching_overhead_both_arms": true,
+                "stairs": "yes",
+                "ladders": "no"
+            },
+            "lifting_description": "Carried 5lbs a day about 2 hours a day",
+            "heaviest_lift": "50",
+            "frequent_lift": "50_or_more",
+            "other_lift_text": "n/a",
+            "other_frequent_lift_text": "n/a",
+            "exposures": {
+                "outdoors": true,
+                "heat": true,
+                "cold": true,
+                "wetness": false,
+                "humidity": true,
+                "hazardous_substances": true,
+                "moving_parts": true,
+                "heights": false,
+                "vibrations": true,
+                "loud_noise": true,
+                "other": true
+            },
+            "other_exposure_text": "n/a",
+            "exposure_description": "n/a",
+            "medical_conditions": "n/a"
+        }
+    ]
+}
