@@ -712,22 +712,22 @@ def client_guided_mode():
                         question["check_type"]
                     )
 
-                try:
-                    validation = json.loads(validation_text)
+                    try:
+                        validation = json.loads(validation_text)
 
-                    status = validation.get("status", "")
-                    follow_up = validation.get("follow_up_question", "")
+                        status = validation.get("status", "")
+                        follow_up = validation.get("follow_up_question", "")
 
-                    if status == "Needs Follow-Up":
-                        st.warning(follow_up or "This answer needs a little more detail.")
-                        st.stop()
+                        if status == "Needs Follow-Up":
+                            st.warning(follow_up or "This answer needs a little more detail.")
+                            st.stop()
 
-                    elif status == "Usable but Light":
-                        st.info(f"Optional improvement: {follow_up}")
+                        elif status == "Usable but Light":
+                            st.info(f"Optional improvement: {follow_up}")
 
-                except Exception:
-                    st.info(validation_text)
-
+                    except Exception:
+                        st.warning("AI review could not read the response, but you can continue.")
+        
             st.session_state.guided_step = next_guided_step(step + 1)
             st.rerun()
 
