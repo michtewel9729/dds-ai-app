@@ -584,6 +584,20 @@ def transcribe_audio(audio_file):
 
     return transcript.text
 
+def create_question_audio(text, filename="question_audio.mp3"):
+    if openai_client is None:
+        return None
+
+    with openai_client.audio.speech.with_streaming_response.create(
+        model="gpt-4o-mini-tts",
+        voice="alloy",
+        input=text,
+        instructions="Speak in a warm, calm, natural, supportive voice. Sound like a real person helping someone complete a form.",
+    ) as response:
+        response.stream_to_file(filename)
+
+    return filename
+
 def client_guided_mode():
     st.title("DDS AI App")
     st.subheader("Client Guided Work History Interview")
@@ -644,6 +658,19 @@ def client_guided_mode():
 
     st.markdown(f"## Job {st.session_state.guided_job_number}")
     render_big_question(question, step, total_steps)
+
+    speech_text = question["question"] + ". " + question.get("helper", "")
+
+    if st.button("🔊 Read Question Aloud", key=f"read_{unique_key}"):
+            audio_path = create_question_audio(
+                speech_text,
+                filename=f"question_audio_{st.session_state.guided_job_number}_{step}.mp3"
+            )
+
+            if audio_path:
+                st.audio(audio_path, format="audio/mp3")
+            else:
+                st.warning("Audio could not be created. Please check your OpenAI API key.")
 
     answer = render_answer_input(question, current_value, unique_key)
     set_guided_value(question, answer)
