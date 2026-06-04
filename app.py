@@ -723,7 +723,8 @@ def client_guided_mode():
                             st.stop()
 
                         elif status == "Usable but Light":
-                            st.info(f"Optional improvement: {follow_up}")
+                            st.warning(f"Optional improvement: {follow_up}")
+                            st.stop()
 
                     except Exception:
                         st.warning("AI review could not read the response, but you can continue.")
