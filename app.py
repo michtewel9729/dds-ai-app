@@ -689,14 +689,16 @@ def client_guided_mode():
                     st.write("Transcript:", transcript)
 
                     if transcript:
-                        st.session_state[f"{unique_key}_voice_text"] = transcript
+                        st.session_state[unique_key] = transcript
                         set_guided_value(question, transcript)
 
-                        st.success("Voice answer added. Click Next, or review the text below.")
+                        st.success("Voice answer added.")
                         st.info(transcript)
 
-                    else:
-                        st.warning("No transcript was created. Please try again.")
+                        st.rerun()
+
+                else:
+                    st.warning("No transcript was created. Please try again.")
 
         with st.expander("💬 Need help with this question?"):
             help_question = st.text_input(
