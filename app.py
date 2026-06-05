@@ -682,22 +682,29 @@ def client_guided_mode():
                 key=f"voice_{unique_key}",
             )
 
-            if audio_answer is not None:
-                if st.button("Use Voice Answer", key=f"use_voice_{unique_key}"):
+        if audio_answer is not None:
+            if st.button("Use Voice Answer", key=f"use_voice_{unique_key}"):
+
+                try:
                     transcript = transcribe_audio(audio_answer)
+                except Exception as e:
+                    st.error("Voice transcription failed.")
+                    st.write(str(e))
+                    transcript = ""
 
-                    st.write("Transcript:", transcript)
+                st.write("Transcript:", transcript)
 
-                    if transcript:
-                        set_guided_value(question, transcript)
+                if transcript:
+                    set_guided_value(question, transcript)
 
-                        st.success("Voice answer added. Click Next to continue.")
-                        st.info(transcript)
+                    st.success("Voice answer added. Click Next to continue.")
+                    st.info(transcript)
 
-                        st.rerun()
+                    st.rerun()
 
                 else:
                     st.warning("No transcript was created. Please try again.")
+                    st.write("Debug: transcript value was:", transcript)
 
         with st.expander("💬 Need help with this question?"):
             help_question = st.text_input(
