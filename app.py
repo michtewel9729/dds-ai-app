@@ -700,7 +700,7 @@ def client_guided_mode():
                     st.success("Voice answer added. Click Next to continue.")
                     st.info(transcript)
 
-                    st.rerun()
+                    
 
                 else:
                     st.warning("No transcript was created. Please try again.")
