@@ -689,10 +689,9 @@ def client_guided_mode():
                     st.write("Transcript:", transcript)
 
                     if transcript:
-                        st.session_state[unique_key] = transcript
                         set_guided_value(question, transcript)
 
-                        st.success("Voice answer added.")
+                        st.success("Voice answer added. Click Next to continue.")
                         st.info(transcript)
 
                         st.rerun()
