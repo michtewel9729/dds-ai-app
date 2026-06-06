@@ -598,6 +598,82 @@ def create_question_audio(text, filename="question_audio.mp3"):
 
     return filename
 
+def show_client_job_review(job, job_number):
+    job = repair_job(job)
+    physical = job["physical_activities"]
+
+    st.markdown(f"## Review Job {job_number}")
+
+    st.info(
+        "Please review your answers before saving this job. "
+        "If something looks wrong, click Edit This Job."
+    )
+
+    st.markdown("### Basic Job Information")
+    st.write("**Job Title:**", job.get("job_title") or "Not answered")
+    st.write("**Employer:**", job.get("employer") or "Not answered")
+    st.write("**Dates Worked:**", f"{job.get('dates_from', '')} to {job.get('dates_to', '')}")
+    st.write("**Pay:**", f"{job.get('pay_rate', '')} per {job.get('pay_type', '')}")
+    st.write("**Schedule:**", f"{job.get('hours_per_day', '')} hours/day, {job.get('days_per_week', '')} days/week")
+
+    st.markdown("### Work Duties")
+    st.write("**Typical Workday:**")
+    st.success(job.get("job_duties") or "Not answered")
+
+    st.write("**Reports / Computer Work:**")
+    st.info(job.get("reports") or "Not answered")
+
+    st.write("**Tools / Equipment:**")
+    st.info(job.get("equipment") or "Not answered")
+
+    st.markdown("### People Interaction")
+    st.write("**Interacted With People:**", job.get("interacted_with_people", "No"))
+
+    if job.get("interacted_with_people") == "Yes":
+        st.info(job.get("interaction_details") or "Not answered")
+
+    st.markdown("### Physical Activity")
+    st.write("**Standing/Walking:**", physical.get("standing_walking") or "Not answered")
+    st.write("**Sitting:**", physical.get("sitting") or "Not answered")
+    st.write("**Stooping/Bending:**", physical.get("stooping") or "Not answered")
+    st.write("**Kneeling:**", physical.get("kneeling") or "Not answered")
+    st.write("**Crouching:**", physical.get("crouching") or "Not answered")
+    st.write("**Crawling:**", physical.get("crawling") or "Not answered")
+
+    st.markdown("### Lifting / Carrying")
+    st.write("**Lifting Description:**")
+    st.info(job.get("lifting_description") or "Not answered")
+    st.write("**Heaviest Lift:**", job.get("other_lift_text") if job.get("heaviest_lift") == "other" else job.get("heaviest_lift") or "Not answered")
+    st.write("**Frequent Lift:**", job.get("other_frequent_lift_text") if job.get("frequent_lift") == "other" else job.get("frequent_lift") or "Not answered")
+
+    st.markdown("### Environmental Exposures")
+    selected_exposures = [
+        name.replace("_", " ").title()
+        for name, checked in job.get("exposures", {}).items()
+        if checked
+    ]
+
+    st.write("**Selected Exposures:**", ", ".join(selected_exposures) if selected_exposures else "None selected")
+    st.info(job.get("exposure_description") or "Not answered")
+
+    st.markdown("### Medical Conditions")
+    st.info(job.get("medical_conditions") or "Not answered")
+
+    warnings = check_job_warnings(job, job_number)
+
+    if warnings:
+        st.markdown("### ⚠️ Missing or Review Items")
+        for warning in warnings:
+            st.warning(warning)
+    else:
+        st.success("This job looks complete enough for review.")
+
+
+
+
+
+
+
 def client_guided_mode():
     st.title("DDS AI App")
     st.subheader("Client Guided Work History Interview")
@@ -612,8 +688,7 @@ def client_guided_mode():
         completed_job = repair_job(st.session_state.guided_job)
 
         st.success(f"Job {st.session_state.guided_job_number} interview complete.")
-        st.markdown("## Review This Job")
-        show_job_review(completed_job, st.session_state.guided_job_number)
+        show_client_job_review(completed_job, st.session_state.guided_job_number)
 
         col1, col2, col3 = st.columns(3)
 
