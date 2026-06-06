@@ -672,8 +672,17 @@ def client_guided_mode():
             else:
                 st.warning("Audio could not be created. Please check your OpenAI API key.")
 
+    voice_text_key = f"{unique_key}_voice_text"
+
     answer = render_answer_input(question, current_value, unique_key)
-    set_guided_value(question, answer)
+
+    saved_voice_answer = st.session_state.get(voice_text_key, "")
+    answer_for_storage = saved_voice_answer if saved_voice_answer else answer
+
+    set_guided_value(question, answer_for_storage)
+
+    if saved_voice_answer:
+        st.info(f"Using voice answer: {saved_voice_answer}")
 
     if question["type"] in ["text", "textarea"]:
         with st.expander("🎤 Prefer to speak your answer?"):
@@ -682,29 +691,28 @@ def client_guided_mode():
                 key=f"voice_{unique_key}",
             )
 
-        if audio_answer is not None:
-            if st.button("Use Voice Answer", key=f"use_voice_{unique_key}"):
+            if audio_answer is not None:
+                if st.button("Use Voice Answer", key=f"use_voice_{unique_key}"):
 
-                try:
-                    transcript = transcribe_audio(audio_answer)
-                except Exception as e:
-                    st.error("Voice transcription failed.")
-                    st.write(str(e))
-                    transcript = ""
+                    try:
+                        transcript = transcribe_audio(audio_answer)
+                    except Exception as e:
+                        st.error("Voice transcription failed.")
+                        st.write(str(e))
+                        transcript = ""
 
-                st.write("Transcript:", transcript)
+                    st.write("Transcript:", transcript)
 
-                if transcript:
-                    set_guided_value(question, transcript)
+                    if transcript:
+                        st.session_state[voice_text_key] = transcript
+                        set_guided_value(question, transcript)
 
-                    st.success("Voice answer added. Click Next to continue.")
-                    st.info(transcript)
+                        st.success("Voice answer added. Click Next to continue.")
+                        st.info(transcript)
 
-                    
-
-                else:
-                    st.warning("No transcript was created. Please try again.")
-                    st.write("Debug: transcript value was:", transcript)
+                    else:
+                        st.warning("No transcript was created. Please try again.")
+                        st.write("Debug: transcript value was:", transcript)
 
         with st.expander("💬 Need help with this question?"):
             help_question = st.text_input(
@@ -721,7 +729,7 @@ def client_guided_mode():
                     )
                     st.info(assistant_response)
                 else:
-                    st.warning("Type a question first.")          
+                    st.warning("Type a question first.")         
 
 
 
@@ -739,7 +747,7 @@ def client_guided_mode():
         if st.button(next_label, use_container_width=True):
 
             if question.get("check_type"):
-                answer_to_validate = str(answer).strip()
+                answer_to_validate = str(get_guided_value(question)).strip()
 
                 if answer_to_validate:
                     validation_text = validate_answer(
