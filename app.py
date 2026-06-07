@@ -943,6 +943,76 @@ def generate_case_pdf(jobs, output_path="work_history_report.pdf"):
 
     return output_path
 
+def generate_case_manager_summary(job):
+    if openai_client is None:
+        return "OpenAI API key is missing. Summary cannot be generated."
+
+    job = repair_job(job)
+
+    prompt = f"""
+You are helping a disability case manager quickly understand a client's work history.
+
+Create a concise case-manager summary from the job data below.
+
+Rules:
+- Do not give legal advice.
+- Do not decide disability or eligibility.
+- Do not add facts.
+- Only summarize what is provided.
+- If something is unclear or missing, list it under "Review Items."
+- Use plain English.
+- Keep it organized and easy to scan.
+
+Job data:
+{json.dumps(job, indent=2)}
+
+Format:
+
+Job Overview:
+...
+
+Main Duties:
+...
+
+Physical Demands:
+...
+
+People Interaction:
+...
+
+Lifting/Carrying:
+...
+
+Environmental Exposures:
+...
+
+Medical Condition Impact:
+...
+
+Review Items:
+...
+"""
+
+    response = openai_client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+    )
+
+    return response.choices[0].message.content
+
+
+
+
+
+
+
+
+
+
+
+
+
 def case_manager_mode():
     st.title("DDS AI App")
     st.subheader("Case Manager Work History Entry")
@@ -1091,6 +1161,14 @@ def case_manager_mode():
             f"Review Job {idx}: {job.get('job_title') or 'Untitled Job'}",
             expanded=False
         ):
+            if st.button(f"Generate AI Summary for Job {idx}", key=f"summary_job_{idx}"):
+                st.session_state[f"ai_summary_job_{idx}"] = generate_case_manager_summary(job)
+
+            if st.session_state.get(f"ai_summary_job_{idx}"):
+                st.markdown("### AI Case Manager Summary")
+                st.info(st.session_state[f"ai_summary_job_{idx}"])
+
+            st.markdown("### Full Job Answers")
             show_job_review(job, idx)
 
 
