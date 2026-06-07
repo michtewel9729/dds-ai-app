@@ -705,8 +705,22 @@ def client_guided_mode():
                 st.rerun()
 
         with col3:
-            if st.button("Edit This Job", use_container_width=True):
-                st.session_state.guided_step = 0
+            edit_options = [
+                f"{i + 1}. {q['question']}"
+                for i, q in enumerate(GUIDED_QUESTIONS)
+                if should_show_guided_question(q)
+            ]
+
+            selected_edit = st.selectbox(
+                "Choose an answer to edit",
+                edit_options,
+                key="edit_question_select"
+            )
+
+            if st.button("Edit Selected Answer", use_container_width=True):
+                selected_index = int(selected_edit.split(".")[0]) - 1
+                st.session_state.editing_from_review = True
+                st.session_state.guided_step = selected_index
                 st.rerun()
 
         st.markdown("---")
@@ -733,6 +747,9 @@ def client_guided_mode():
 
     st.markdown(f"## Job {st.session_state.guided_job_number}")
     render_big_question(question, step, total_steps)
+
+    if st.session_state.get("editing_from_review"):
+        st.warning("You are editing this answer. Click Next to return to the review page.")
 
     speech_text = question["question"] + ". " + question.get("helper", "")
 
@@ -847,7 +864,12 @@ def client_guided_mode():
                     except Exception:
                         st.warning("AI review could not read the response, but you can continue.")
         
-            st.session_state.guided_step = next_guided_step(step + 1)
+            if st.session_state.get("editing_from_review"):
+                st.session_state.editing_from_review = False
+                st.session_state.guided_step = len(GUIDED_QUESTIONS)
+            else:
+                st.session_state.guided_step = next_guided_step(step + 1)
+
             st.rerun()
 
     with col3:
