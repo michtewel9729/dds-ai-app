@@ -30,23 +30,67 @@ if OPENAI_API_KEY:
     openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
 def guided_date_picker(label, key_prefix, current_value=""):
-    months = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    months = [
+        "", "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ]
     days = [""] + [str(i) for i in range(1, 32)]
     years = ["", "Present"] + [str(y) for y in range(2026, 1950, -1)]
+
+    saved_month = ""
+    saved_day = ""
+    saved_year = ""
+
+    current_value = str(current_value or "").strip()
+
+    if current_value.lower() == "present":
+        saved_year = "Present"
+    elif current_value:
+        try:
+            parsed = datetime.strptime(current_value, "%B %d, %Y")
+            saved_month = parsed.strftime("%B")
+            saved_day = str(parsed.day)
+            saved_year = str(parsed.year)
+        except:
+            try:
+                parsed = datetime.strptime(current_value, "%B %Y")
+                saved_month = parsed.strftime("%B")
+                saved_year = str(parsed.year)
+            except:
+                pass
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        month = st.selectbox("Month", months, key=f"{key_prefix}_month")
+        month = st.selectbox(
+            "Month",
+            months,
+            index=safe_index(months, saved_month),
+            key=f"{key_prefix}_month"
+        )
+
     with col2:
-        day = st.selectbox("Day", days, key=f"{key_prefix}_day")
+        day = st.selectbox(
+            "Day",
+            days,
+            index=safe_index(days, saved_day),
+            key=f"{key_prefix}_day"
+        )
+
     with col3:
-        year = st.selectbox("Year", years, key=f"{key_prefix}_year")
+        year = st.selectbox(
+            "Year",
+            years,
+            index=safe_index(years, saved_year),
+            key=f"{key_prefix}_year"
+        )
 
     if year == "Present":
         return "Present"
+
     if month and year:
         return f"{month} {day + ', ' if day else ''}{year}"
+
     return current_value
 
 
