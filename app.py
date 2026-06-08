@@ -768,7 +768,81 @@ def job_memory_helper():
                 "Use these notes to help answer the form. Do not guess details you do not remember."
             )
 
+def show_in_flow_review_banner(issue_id, message, target_step):
+    dismissed_key = f"{issue_id}_dismissed"
+    active_key = f"{issue_id}_active"
 
+    if st.session_state.get(dismissed_key):
+        return
+
+    st.warning(message)
+
+    col_a, col_b = st.columns(2)
+
+    with col_a:
+        if st.button("Review Earlier Answer", key=f"review_{issue_id}"):
+            st.session_state.editing_from_banner = True
+            st.session_state.return_step_after_banner_edit = st.session_state.guided_step
+            st.session_state.guided_step = target_step
+            st.rerun()
+
+    with col_b:
+        if st.button("Continue", key=f"continue_{issue_id}"):
+            st.session_state[dismissed_key] = True
+            st.rerun()
+
+def check_in_flow_review_issues(job, current_question_key):
+    issues = []
+
+    duties_text = str(job.get("job_duties", "")).lower()
+    lifting_text = str(job.get("lifting_description", "")).lower()
+
+    people_words = [
+        "customer", "customers", "client", "clients", "patient", "patients",
+        "coworker", "coworkers", "supervisor", "manager", "public",
+        "helped people", "answered questions", "served"
+    ]
+
+    if current_question_key == "job_duties":
+        if job.get("interacted_with_people") == "No":
+            if any(word in duties_text for word in people_words):
+                issues.append({
+                    "issue_id": "people_interaction_review",
+                    "message": (
+                        "Helpful Review Item: You marked that this job did not involve "
+                        "interaction with people, but your job duties mention customers, "
+                        "coworkers, supervisors, or the public. Would you like to review that answer?"
+                    ),
+                    "target_step": find_question_step("interacted_with_people")
+                })
+
+    lift_words = [
+        "lift", "lifted", "lifting", "carry", "carried", "carrying",
+        "box", "boxes", "stock", "stocked", "loaded", "unloaded",
+        "equipment", "supplies"
+    ]
+
+    if current_question_key in ["job_duties", "lifting_description"]:
+        if any(word in f"{duties_text} {lifting_text}" for word in lift_words):
+            if not job.get("heaviest_lift") and not job.get("frequent_lift"):
+                issues.append({
+                    "issue_id": "lifting_review",
+                    "message": (
+                        "Helpful Review Item: Your answers mention lifting, carrying, boxes, "
+                        "equipment, or stocking, but the lifting weight fields may still be blank. "
+                        "Would you like to review the lifting questions?"
+                    ),
+                    "target_step": find_question_step("heaviest_lift")
+                })
+
+    return issues
+
+
+def find_question_step(question_key):
+    for i, q in enumerate(GUIDED_QUESTIONS):
+        if q.get("key") == question_key:
+            return i
+    return 0
 
 
 def client_guided_mode():
@@ -873,6 +947,18 @@ def client_guided_mode():
 
     set_guided_value(question, answer_for_storage)
 
+    issues = check_in_flow_review_issues(
+        st.session_state.guided_job,
+        question["key"]
+    )
+
+    for issue in issues:
+        show_in_flow_review_banner(
+            issue["issue_id"],
+            issue["message"],
+            issue["target_step"]
+        )
+
     if saved_voice_answer:
         st.info(f"Using voice answer: {saved_voice_answer}")
 
@@ -967,6 +1053,14 @@ def client_guided_mode():
             if st.session_state.get("editing_from_review"):
                 st.session_state.editing_from_review = False
                 st.session_state.guided_step = len(GUIDED_QUESTIONS)
+
+            elif st.session_state.get("editing_from_banner"):
+                st.session_state.editing_from_banner = False
+                st.session_state.guided_step = st.session_state.get(
+                    "return_step_after_banner_edit",
+                    next_guided_step(step + 1)
+                )
+
             else:
                 st.session_state.guided_step = next_guided_step(step + 1)
 
