@@ -311,8 +311,40 @@ def next_guided_step(start):
         step += 1
     return len(GUIDED_QUESTIONS)
 
+def parse_work_date(date_str):
+    if not date_str:
+        return None
+
+    date_str = str(date_str).strip()
+
+    if date_str.lower() in ["present", "current", "now"]:
+        return None
+
+    formats = [
+        "%B %d, %Y",
+        "%B %Y",
+        "%m/%Y",
+        "%m-%d-%Y",
+        "%m/%d/%Y",
+    ]
+
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except:
+            pass
+
+    return None
+
+
+
+
+
 
 def check_job_warnings(job, job_number):
+
+
+
     warnings = []
     job = repair_job(job)
     physical = job["physical_activities"]
@@ -344,9 +376,30 @@ def check_job_warnings(job, job_number):
         "reaching_overhead_arm_usage", "stairs", "ladders"
     ]
 
+    physical_labels = {
+        "standing_walking": "Standing/walking time",
+        "sitting": "Sitting time",
+        "stooping": "Stooping/bending time",
+        "kneeling": "Kneeling time",
+        "crouching": "Crouching time",
+        "crawling": "Crawling time",
+        "fingers_time": "Finger/hand use time",
+        "fingers_hand_usage": "One hand or both hands for finger use",
+        "grasping_time": "Grasping/holding time",
+        "grasping_hand_usage": "One hand or both hands for grasping",
+        "reaching_below_time": "Reaching at/below shoulder time",
+        "reaching_below_arm_usage": "One arm or both arms for reaching below",
+        "reaching_overhead_time": "Reaching overhead time",
+        "reaching_overhead_arm_usage": "One arm or both arms for reaching overhead",
+        "stairs": "Stairs/ramps time",
+        "ladders": "Ladders/ropes/scaffolds time",
+    }
+
     for key in physical_required:
         if is_blank(physical.get(key)):
-            warnings.append(f"Job {job_number}: Missing physical activity field: {key}.")
+            warnings.append(
+                f"Job {job_number}: Missing physical activity answer — {physical_labels.get(key, key)}."
+            )
 
     if job.get("interacted_with_people") == "Yes" and is_blank(job.get("interaction_details")):
         warnings.append(f"Job {job_number}: Interaction details are required because interaction is marked Yes.")
@@ -356,10 +409,16 @@ def check_job_warnings(job, job_number):
         if key.endswith("_usage"):
             continue
         clean = str(value or "").strip().lower()
+        field_label = physical_labels.get(key, key)
+
         if clean and clean.isdigit():
-            warnings.append(f"Job {job_number}: '{key}' says only '{value}'. Add a unit like hours/minutes or write None.")
+            warnings.append(
+                f"Job {job_number}: Please review {field_label} — '{value}' needs a unit like hours/minutes, or write None."
+            )
         elif clean and not any(unit in clean for unit in unit_words):
-            warnings.append(f"Job {job_number}: '{key}' may need a unit like hours/minutes or write None.")
+            warnings.append(
+                f"Job {job_number}: Please review {field_label} — answer may need a unit like hours/minutes, or write None."
+            )
 
        # -----------------------------
     # Review checks / contradiction checks
@@ -834,6 +893,51 @@ def check_in_flow_review_issues(job, current_question_key):
                     ),
                     "target_step": find_question_step("heaviest_lift")
                 })
+
+        # Date review banner
+    if current_question_key == "dates_to":
+
+        start = job.get("dates_from", "")
+        end = job.get("dates_to", "")
+
+        start_date = parse_work_date(start)
+        end_date = parse_work_date(end)
+
+        if start_date and end_date:
+            if end_date < start_date:
+
+                issues.append({
+                    "issue_id": "date_review",
+                    "message": (
+                        f"Helpful Review Item: "
+                        f"The start date is {start}, but the end date is {end}. "
+                        f"Would you like to review the dates?"
+                    ),
+                    "target_step": find_question_step("dates_from")
+                })
+
+
+    if current_question_key == "dates_to":
+        start = job.get("dates_from", "")
+        end = job.get("dates_to", "")
+
+        start_date = parse_work_date(start)
+        end_date = parse_work_date(end)
+
+        if start_date and end_date and end_date != "present":
+            if end_date < start_date:
+                issues.append({
+                    "issue_id": "date_review",
+                    "message": (
+                        f"Helpful Review Item: The start date is {start}, "
+                        f"but the end date is {end}. Would you like to review the job dates?"
+                    ),
+                    "target_step": find_question_step("dates_from")
+                })
+
+
+
+
 
     return issues
 
