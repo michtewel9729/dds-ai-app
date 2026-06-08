@@ -829,7 +829,6 @@ def job_memory_helper():
 
 def show_in_flow_review_banner(issue_id, message, target_step):
     dismissed_key = f"{issue_id}_dismissed"
-    active_key = f"{issue_id}_active"
 
     if st.session_state.get(dismissed_key):
         return
@@ -838,15 +837,17 @@ def show_in_flow_review_banner(issue_id, message, target_step):
 
     col_a, col_b = st.columns(2)
 
+    unique_suffix = f"{issue_id}_{st.session_state.guided_job_number}_{st.session_state.guided_step}"
+
     with col_a:
-        if st.button("Review Earlier Answer", key=f"review_{issue_id}"):
+        if st.button("Review Earlier Answer", key=f"review_{unique_suffix}"):
             st.session_state.editing_from_banner = True
             st.session_state.return_step_after_banner_edit = st.session_state.guided_step
             st.session_state.guided_step = target_step
             st.rerun()
 
     with col_b:
-        if st.button("Continue", key=f"continue_{issue_id}"):
+        if st.button("Continue", key=f"continue_{unique_suffix}"):
             st.session_state[dismissed_key] = True
             st.rerun()
 
@@ -915,29 +916,6 @@ def check_in_flow_review_issues(job, current_question_key):
                     ),
                     "target_step": find_question_step("dates_from")
                 })
-
-
-    if current_question_key == "dates_to":
-        start = job.get("dates_from", "")
-        end = job.get("dates_to", "")
-
-        start_date = parse_work_date(start)
-        end_date = parse_work_date(end)
-
-        if start_date and end_date and end_date != "present":
-            if end_date < start_date:
-                issues.append({
-                    "issue_id": "date_review",
-                    "message": (
-                        f"Helpful Review Item: The start date is {start}, "
-                        f"but the end date is {end}. Would you like to review the job dates?"
-                    ),
-                    "target_step": find_question_step("dates_from")
-                })
-
-
-
-
 
     return issues
 
