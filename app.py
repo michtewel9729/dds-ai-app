@@ -713,7 +713,60 @@ def show_client_job_review(job, job_number):
         st.success("This job looks complete enough for review.")
 
 
+def job_memory_helper():
+    with st.expander("🧠 Need help remembering jobs from the last 5 years?"):
+        st.info(
+            "This helper is only for memory. It does not fill the form unless you choose to use an answer."
+        )
 
+        job_types = st.multiselect(
+            "Do any of these sound familiar?",
+            [
+                "Retail / store job",
+                "Warehouse",
+                "Restaurant / food service",
+                "Cleaning / janitorial",
+                "Home care / PCA / CNA",
+                "Delivery / driving",
+                "Office / computer work",
+                "Temp agency",
+                "Factory / production",
+                "Hospital / clinic",
+                "School / daycare",
+                "Security",
+                "Construction / labor",
+                "Other",
+            ],
+            key="memory_job_types",
+        )
+
+        memory_notes = st.text_area(
+            "Write anything you remember: employer names, cities, coworkers, managers, uniforms, schedules, or dates.",
+            key="memory_notes",
+            height=120,
+        )
+
+        if st.button("Create memory checklist", key="create_memory_checklist"):
+            st.session_state.memory_checklist = {
+                "job_types": job_types,
+                "notes": memory_notes,
+            }
+
+        if st.session_state.get("memory_checklist"):
+            st.markdown("### Possible job memory clues")
+
+            if job_types:
+                st.write("**Job areas remembered:**")
+                for item in job_types:
+                    st.write(f"- {item}")
+
+            if memory_notes:
+                st.write("**Notes remembered:**")
+                st.info(memory_notes)
+
+            st.warning(
+                "Use these notes to help answer the form. Do not guess details you do not remember."
+            )
 
 
 
@@ -723,6 +776,9 @@ def client_guided_mode():
     st.subheader("Client Guided Work History Interview")
     st.caption(APP_DISCLAIMER)
     st.markdown("---")
+
+    if st.session_state.guided_step == 0:
+        job_memory_helper()
 
     st.session_state.guided_step = next_guided_step(st.session_state.guided_step)
     total_steps = len(GUIDED_QUESTIONS)
