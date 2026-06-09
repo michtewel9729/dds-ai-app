@@ -462,7 +462,22 @@ def check_job_warnings(job, job_number):
             )
 
     except:
-        pass        
+        pass
+
+    weight_words = [
+        "lb", "lbs", "pound", "pounds",
+        "10", "20", "25", "30", "40", "50", "75", "100"
+    ]
+
+    mentions_weight = any(
+        word in lifting_text
+        for word in weight_words
+    )
+
+    if mentions_weight and frequent_is_zero:
+        warnings.append(
+            f"Job {job_number}: Please review lifting answers — a weight is mentioned in the lifting description, but the frequently lifted weight appears to be zero or none."
+        )        
 
        # -----------------------------
     # Review checks / contradiction checks
@@ -986,17 +1001,17 @@ def check_in_flow_review_issues(job, current_question_key):
         "helped people", "answered questions", "served"
     ]
 
-    if current_question_key == "job_duties":
-        if job.get("interacted_with_people") == "No":
-            if any(word in duties_text for word in people_words):
+    if current_question_key == "frequent_lift":
+        if any(word in f"{duties_text} {lifting_text}" for word in lift_words):
+            if not job.get("heaviest_lift") or not job.get("frequent_lift"):
                 issues.append({
-                    "issue_id": "people_interaction_review",
+                    "issue_id": "lifting_review",
                     "message": (
-                        "Helpful Review Item: You marked that this job did not involve "
-                        "interaction with people, but your job duties mention customers, "
-                        "coworkers, supervisors, or the public. Would you like to review that answer?"
+                        "Helpful Review Item: Your answers mention lifting, carrying, boxes, "
+                        "equipment, or stocking, but the lifting weight answers may need another look. "
+                        "Would you like to review the lifting questions?"
                     ),
-                    "target_step": find_question_step("interacted_with_people")
+                    "target_step": find_question_step("heaviest_lift")
                 })
 
     lift_words = [
@@ -1068,33 +1083,6 @@ def show_job_memory_summary():
 
     if not has_any_info:
         return
-
-    with st.expander("📌 What you've told us so far", expanded=False):
-        if job.get("job_title") or job.get("employer"):
-            st.write(f"**Job:** {job.get('job_title') or 'Not answered'} at {job.get('employer') or 'Not answered'}")
-
-        if job.get("dates_from") or job.get("dates_to"):
-            st.write(f"**Dates:** {job.get('dates_from') or 'Not answered'} to {job.get('dates_to') or 'Not answered'}")
-
-        if job.get("hours_per_day") or job.get("days_per_week"):
-            st.write(f"**Schedule:** {job.get('hours_per_day') or 'Not answered'} hours/day, {job.get('days_per_week') or 'Not answered'} days/week")
-
-        if job.get("job_duties"):
-            st.write("**Main duties:**")
-            st.info(job.get("job_duties"))
-
-        if job.get("interacted_with_people"):
-            st.write(f"**Interacted with people:** {job.get('interacted_with_people')}")
-
-        if job.get("lifting_description"):
-            st.write("**Lifting/carrying:**")
-            st.info(job.get("lifting_description"))
-
-        if physical.get("standing_walking") or physical.get("sitting"):
-            st.write("**Physical activity so far:**")
-            st.write(f"- Standing/walking: {physical.get('standing_walking') or 'Not answered'}")
-            st.write(f"- Sitting: {physical.get('sitting') or 'Not answered'}")
-
 
 
 
