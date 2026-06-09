@@ -720,35 +720,35 @@ def show_job_review(job, job_number):
         st.markdown("### People Interaction")
         st.write("**Interacted With People:**", job.get("interacted_with_people", "No"))
 
-    if job.get("interacted_with_people") == "Yes":
-        st.info(job.get("interaction_details") or "Not answered")
+        if job.get("interacted_with_people") == "Yes":
+            st.info(job.get("interaction_details") or "Not answered")
 
-    st.markdown("### Physical Activity")
-    st.write("**Standing/Walking:**", physical.get("standing_walking") or "Not answered")
-    st.write("**Sitting:**", physical.get("sitting") or "Not answered")
-    st.write("**Stooping/Bending:**", physical.get("stooping") or "Not answered")
-    st.write("**Kneeling:**", physical.get("kneeling") or "Not answered")
-    st.write("**Crouching:**", physical.get("crouching") or "Not answered")
-    st.write("**Crawling:**", physical.get("crawling") or "Not answered")
+        st.markdown("### Physical Activity")
+        st.write("**Standing/Walking:**", physical.get("standing_walking") or "Not answered")
+        st.write("**Sitting:**", physical.get("sitting") or "Not answered")
+        st.write("**Stooping/Bending:**", physical.get("stooping") or "Not answered")
+        st.write("**Kneeling:**", physical.get("kneeling") or "Not answered")
+        st.write("**Crouching:**", physical.get("crouching") or "Not answered")
+        st.write("**Crawling:**", physical.get("crawling") or "Not answered")
 
-    st.markdown("### Lifting / Carrying")
-    st.write("**Lifting Description:**")
-    st.info(job.get("lifting_description") or "Not answered")
-    st.write("**Heaviest Lift:**", job.get("other_lift_text") if job.get("heaviest_lift") == "other" else job.get("heaviest_lift") or "Not answered")
-    st.write("**Frequent Lift:**", job.get("other_frequent_lift_text") if job.get("frequent_lift") == "other" else job.get("frequent_lift") or "Not answered")
+        st.markdown("### Lifting / Carrying")
+        st.write("**Lifting Description:**")
+        st.info(job.get("lifting_description") or "Not answered")
+        st.write("**Heaviest Lift:**", job.get("other_lift_text") if job.get("heaviest_lift") == "other" else job.get("heaviest_lift") or "Not answered")
+        st.write("**Frequent Lift:**", job.get("other_frequent_lift_text") if job.get("frequent_lift") == "other" else job.get("frequent_lift") or "Not answered")
 
-    st.markdown("### Environmental Exposures")
-    selected_exposures = [
-        name.replace("_", " ").title()
-        for name, checked in job.get("exposures", {}).items()
-        if checked
-    ]
+        st.markdown("### Environmental Exposures")
+        selected_exposures = [
+            name.replace("_", " ").title()
+            for name, checked in job.get("exposures", {}).items()
+            if checked
+        ]
 
-    st.write("**Selected Exposures:**", ", ".join(selected_exposures) if selected_exposures else "None selected")
-    st.info(job.get("exposure_description") or "Not answered")
+        st.write("**Selected Exposures:**", ", ".join(selected_exposures) if selected_exposures else "None selected")
+        st.info(job.get("exposure_description") or "Not answered")
 
-    st.markdown("### Medical Conditions")
-    st.info(job.get("medical_conditions") or "Not answered")
+        st.markdown("### Medical Conditions")
+        st.info(job.get("medical_conditions") or "Not answered")
 
 def ask_help_assistant(user_question, current_form_question=""):
     if openai_client is None:
