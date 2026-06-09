@@ -263,6 +263,7 @@ GUIDED_QUESTIONS = [
     {"key": "other_frequent_lift_text","target": "job","icon": "📦","question": "What weight did you frequently lift?","helper": "Since you selected Other, type the amount. Example: 75 pounds, 80 pounds, or unknown.","type": "text","depends_on": {"key": "frequent_lift", "value": "other"}},
     {"key": "exposure_checkboxes","target": "exposures","icon": "⚠️","question": "Which environmental exposures did this job have?","helper": "Select all that apply. If none apply, leave this blank and explain None on the next question.", "type": "multiselect","options": ["outdoors","heat","cold","wetness","humidity","hazardous_substances","moving_parts","heights","vibrations","loud_noise","other",],
      },
+     {"key": "other_exposure_text","target": "job","icon": "⚠️","question": "What other exposure did this job have?","helper": "Since you selected Other, describe the exposure. Example: dust, fumes, smoke, chemicals, strong smells, poor ventilation, or unknown.","type": "text","depends_on": {"key": "exposure_checkboxes", "contains": "other"},},
     {"key": "exposure_description", "target": "job", "icon": "⚠️", "question": "Were you exposed to heat, cold, wetness, fumes, noise, heights, moving machinery, or other hazards?", "helper": "If none, write None. If yes, describe what you were exposed to and how often.", "type": "textarea"},
     {"key": "medical_conditions", "target": "job", "icon": "🩺", "question": "How did your medical conditions affect your ability to do this job?", "helper": "Example: Back pain made standing and lifting difficult. If not applicable, write None.", "type": "textarea", "check_type": "medical_conditions"},
     {"key": "extra_notes", "target": "job", "icon": "📌", "question": "Is there anything else important about this job?", "helper": "Add anything that helps explain the work. You can also write none.", "type": "textarea"},
@@ -300,7 +301,30 @@ def should_show_guided_question(question):
     dep = question.get("depends_on")
     if not dep:
         return True
-    return st.session_state.guided_job.get(dep["key"]) == dep["value"]
+
+    dep_key = dep.get("key")
+    dep_value = dep.get("value")
+    dep_contains = dep.get("contains")
+
+    if dep_key == "exposure_checkboxes":
+        selected = [
+            key for key, checked in st.session_state.guided_job["exposures"].items()
+            if checked
+        ]
+
+        if dep_contains:
+            return dep_contains in selected
+
+        return selected == dep_value
+
+    current_value = st.session_state.guided_job.get(dep_key)
+
+    if dep_contains:
+        if isinstance(current_value, list):
+            return dep_contains in current_value
+        return dep_contains in str(current_value)
+
+    return current_value == dep_value
 
 
 def next_guided_step(start):
