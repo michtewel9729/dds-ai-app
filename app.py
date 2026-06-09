@@ -444,6 +444,26 @@ def check_job_warnings(job, job_number):
                 f"Job {job_number}: Please review {field_label} — answer may need a unit like hours/minutes, or write None."
             )
 
+    # Days per week review
+    try:
+        days_text = str(job.get("days_per_week", "")).lower()
+
+        days_number = float(
+            days_text
+            .replace("days", "")
+            .replace("day", "")
+            .strip()
+        )
+
+        if days_number > 7:
+            warnings.append(
+                f"Job {job_number}: Please review schedule — days worked per week is "
+                f"{job.get('days_per_week')}, but a week only has 7 days."
+            )
+
+    except:
+        pass        
+
        # -----------------------------
     # Review checks / contradiction checks
     # -----------------------------
