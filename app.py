@@ -959,6 +959,56 @@ def find_question_step(question_key):
             return i
     return 0
 
+def show_job_memory_summary():
+    job = repair_job(st.session_state.guided_job)
+    physical = job["physical_activities"]
+
+    has_any_info = any([
+        job.get("job_title"),
+        job.get("employer"),
+        job.get("dates_from"),
+        job.get("dates_to"),
+        job.get("hours_per_day"),
+        job.get("days_per_week"),
+        job.get("job_duties"),
+        job.get("lifting_description"),
+        physical.get("standing_walking"),
+        physical.get("sitting"),
+    ])
+
+    if not has_any_info:
+        return
+
+    with st.expander("📌 What you've told us so far", expanded=False):
+        if job.get("job_title") or job.get("employer"):
+            st.write(f"**Job:** {job.get('job_title') or 'Not answered'} at {job.get('employer') or 'Not answered'}")
+
+        if job.get("dates_from") or job.get("dates_to"):
+            st.write(f"**Dates:** {job.get('dates_from') or 'Not answered'} to {job.get('dates_to') or 'Not answered'}")
+
+        if job.get("hours_per_day") or job.get("days_per_week"):
+            st.write(f"**Schedule:** {job.get('hours_per_day') or 'Not answered'} hours/day, {job.get('days_per_week') or 'Not answered'} days/week")
+
+        if job.get("job_duties"):
+            st.write("**Main duties:**")
+            st.info(job.get("job_duties"))
+
+        if job.get("interacted_with_people"):
+            st.write(f"**Interacted with people:** {job.get('interacted_with_people')}")
+
+        if job.get("lifting_description"):
+            st.write("**Lifting/carrying:**")
+            st.info(job.get("lifting_description"))
+
+        if physical.get("standing_walking") or physical.get("sitting"):
+            st.write("**Physical activity so far:**")
+            st.write(f"- Standing/walking: {physical.get('standing_walking') or 'Not answered'}")
+            st.write(f"- Sitting: {physical.get('sitting') or 'Not answered'}")
+
+
+
+
+
 
 def client_guided_mode():
     st.title("DDS AI App")
@@ -1044,6 +1094,9 @@ def client_guided_mode():
         f"You're making great progress. About {percent_done}% complete "
         f"({questions_left} questions remaining)."
     )
+
+    if step >= 5:
+        show_job_memory_summary()
 
     if st.session_state.get("editing_from_review"):
         st.warning("You are editing this answer. Click Next to return to the review page.")
