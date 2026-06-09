@@ -789,11 +789,20 @@ def show_client_job_review(job, job_number):
     warnings = check_job_warnings(job, job_number)
 
     if warnings:
-        st.markdown("### ⚠️ Missing or Review Items")
-        for warning in warnings:
-            st.warning(warning)
+        st.markdown("### 📋 A Few Items May Need Another Look")
+
+        st.info(
+            "These items are only reminders to review. "
+            "They do not mean the answers are wrong."
+        )
+
+        with st.expander("Review suggested items", expanded=True):
+            for warning in warnings:
+                clean_warning = warning.replace(f"Job {job_number}: ", "")
+                st.write(f"• {clean_warning}")
+
     else:
-        st.success("This job looks complete enough for review.")
+        st.success("No major missing items detected. Please review before saving.")
 
 
 def job_memory_helper():
@@ -1027,6 +1036,14 @@ def client_guided_mode():
 
     st.markdown(f"## Job {st.session_state.guided_job_number}")
     render_big_question(question, step, total_steps)
+
+    questions_left = total_steps - (step + 1)
+    percent_done = int(((step + 1) / total_steps) * 100)
+
+    st.caption(
+        f"You're making great progress. About {percent_done}% complete "
+        f"({questions_left} questions remaining)."
+    )
 
     if st.session_state.get("editing_from_review"):
         st.warning("You are editing this answer. Click Next to return to the review page.")
