@@ -652,12 +652,103 @@ def show_job_review(job, job_number):
         st.info("None selected.")
 
     warnings = check_job_warnings(job, job_number)
+
+    st.markdown("### 📋 Job Summary")
+
+    summary_items = []
+
+    if job.get("job_title") or job.get("employer"):
+        summary_items.append(
+            f"**Job:** {job.get('job_title') or 'Not answered'} at {job.get('employer') or 'Not answered'}"
+        )
+
+    if job.get("dates_from") or job.get("dates_to"):
+        summary_items.append(
+            f"**Dates:** {job.get('dates_from') or 'Not answered'} to {job.get('dates_to') or 'Not answered'}"
+        )
+
+    if job.get("hours_per_day") or job.get("days_per_week"):
+        summary_items.append(
+            f"**Schedule:** {job.get('hours_per_day') or 'Not answered'} hours/day, {job.get('days_per_week') or 'Not answered'} days/week"
+        )
+
+    if job.get("interacted_with_people"):
+        summary_items.append(
+            f"**People interaction:** {job.get('interacted_with_people')}"
+        )
+
+    if job.get("heaviest_lift") or job.get("frequent_lift"):
+        heaviest = job.get("other_lift_text") if job.get("heaviest_lift") == "other" else job.get("heaviest_lift")
+        frequent = job.get("other_frequent_lift_text") if job.get("frequent_lift") == "other" else job.get("frequent_lift")
+
+        summary_items.append(
+            f"**Lifting:** Heaviest: {heaviest or 'Not answered'} | Frequent: {frequent or 'Not answered'}"
+        )
+
+    for item in summary_items:
+        st.write(item)
+
+    if job.get("job_duties"):
+        st.write("**Main duties:**")
+        st.info(job.get("job_duties"))
+
     if warnings:
-        with st.expander(f"Please Review Job {job_number}", expanded=True):
+        st.warning(f"{len(warnings)} review item(s) may need another look.")
+
+        with st.expander("View Review Items", expanded=False):
+            st.info(
+                "These are reminders to review. They do not mean the answers are wrong."
+            )
+
             for warning in warnings:
-                st.warning(warning)
+                clean_warning = warning.replace(f"Job {job_number}: ", "")
+                st.write(f"• {clean_warning}")
     else:
-        st.success(f"Job {job_number} looks complete enough for review.")
+        st.success("No major missing items detected. Please review before saving.")
+
+    with st.expander("View Full Details", expanded=False):
+        st.markdown("### Work Duties")
+        st.write("**Typical Workday:**")
+        st.success(job.get("job_duties") or "Not answered")
+
+        st.write("**Reports / Computer Work:**")
+        st.info(job.get("reports") or "Not answered")
+
+        st.write("**Tools / Equipment:**")
+        st.info(job.get("equipment") or "Not answered")
+
+        st.markdown("### People Interaction")
+        st.write("**Interacted With People:**", job.get("interacted_with_people", "No"))
+
+    if job.get("interacted_with_people") == "Yes":
+        st.info(job.get("interaction_details") or "Not answered")
+
+    st.markdown("### Physical Activity")
+    st.write("**Standing/Walking:**", physical.get("standing_walking") or "Not answered")
+    st.write("**Sitting:**", physical.get("sitting") or "Not answered")
+    st.write("**Stooping/Bending:**", physical.get("stooping") or "Not answered")
+    st.write("**Kneeling:**", physical.get("kneeling") or "Not answered")
+    st.write("**Crouching:**", physical.get("crouching") or "Not answered")
+    st.write("**Crawling:**", physical.get("crawling") or "Not answered")
+
+    st.markdown("### Lifting / Carrying")
+    st.write("**Lifting Description:**")
+    st.info(job.get("lifting_description") or "Not answered")
+    st.write("**Heaviest Lift:**", job.get("other_lift_text") if job.get("heaviest_lift") == "other" else job.get("heaviest_lift") or "Not answered")
+    st.write("**Frequent Lift:**", job.get("other_frequent_lift_text") if job.get("frequent_lift") == "other" else job.get("frequent_lift") or "Not answered")
+
+    st.markdown("### Environmental Exposures")
+    selected_exposures = [
+        name.replace("_", " ").title()
+        for name, checked in job.get("exposures", {}).items()
+        if checked
+    ]
+
+    st.write("**Selected Exposures:**", ", ".join(selected_exposures) if selected_exposures else "None selected")
+    st.info(job.get("exposure_description") or "Not answered")
+
+    st.markdown("### Medical Conditions")
+    st.info(job.get("medical_conditions") or "Not answered")
 
 def ask_help_assistant(user_question, current_form_question=""):
     if openai_client is None:
