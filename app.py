@@ -1001,33 +1001,39 @@ def check_in_flow_review_issues(job, current_question_key):
         "helped people", "answered questions", "served"
     ]
 
+    lift_words = [
+        "lift", "lifted", "lifting",
+        "carry", "carried", "carrying",
+        "box", "boxes",
+        "stock", "stocked",
+        "loaded", "unloaded",
+        "equipment", "supplies"
+    ]
+
+    if current_question_key == "job_duties":
+        if job.get("interacted_with_people") == "No":
+            if any(word in duties_text for word in people_words):
+                issues.append({
+                    "issue_id": "people_interaction_review",
+                    "message": (
+                        "Helpful Review Item: You marked that this job did not involve "
+                        "interaction with people, but your job duties mention customers, "
+                        "coworkers, supervisors, or the public. Would you like to review that answer?"
+                    ),
+                    "target_step": find_question_step("interacted_with_people")
+                })
+
     if current_question_key == "frequent_lift":
+
         if any(word in f"{duties_text} {lifting_text}" for word in lift_words):
+
             if not job.get("heaviest_lift") or not job.get("frequent_lift"):
+
                 issues.append({
                     "issue_id": "lifting_review",
                     "message": (
                         "Helpful Review Item: Your answers mention lifting, carrying, boxes, "
                         "equipment, or stocking, but the lifting weight answers may need another look. "
-                        "Would you like to review the lifting questions?"
-                    ),
-                    "target_step": find_question_step("heaviest_lift")
-                })
-
-    lift_words = [
-        "lift", "lifted", "lifting", "carry", "carried", "carrying",
-        "box", "boxes", "stock", "stocked", "loaded", "unloaded",
-        "equipment", "supplies"
-    ]
-
-    if current_question_key in ["job_duties", "lifting_description"]:
-        if any(word in f"{duties_text} {lifting_text}" for word in lift_words):
-            if not job.get("heaviest_lift") and not job.get("frequent_lift"):
-                issues.append({
-                    "issue_id": "lifting_review",
-                    "message": (
-                        "Helpful Review Item: Your answers mention lifting, carrying, boxes, "
-                        "equipment, or stocking, but the lifting weight fields may still be blank. "
                         "Would you like to review the lifting questions?"
                     ),
                     "target_step": find_question_step("heaviest_lift")
