@@ -1345,7 +1345,7 @@ def client_guided_mode():
         else:
             st.session_state.guided_step = next_guided_step(step + 1)
 
-            st.rerun()
+        st.rerun()
 
     with col3:
         st.progress((step + 1) / total_steps)
