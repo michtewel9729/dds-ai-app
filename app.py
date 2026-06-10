@@ -1310,42 +1310,47 @@ def client_guided_mode():
                         follow_up = validation.get("follow_up_question", "")
 
                         if status == "Needs Follow-Up":
-                            st.warning(follow_up or "This answer needs a little more detail.")
+                            st.warning(
+                                follow_up or
+                                "This answer needs a little more detail."
+                            )
                             st.stop()
 
-                        
                         elif status == "Usable but Light":
                             st.info(f"Optional improvement: {follow_up}")
 
                     except Exception:
-                        st.warning("AI review could not read the response, but you can continue.")
-        
-        if st.session_state.get("editing_from_review"):
-            next_step = next_guided_step(step + 1)
+                        st.warning(
+                            "AI review could not read the response, "
+                            "but you can continue."
+                        )
 
-            if next_step < len(GUIDED_QUESTIONS):
-                next_question = GUIDED_QUESTIONS[next_step]
+            if st.session_state.get("editing_from_review"):
+                next_step = next_guided_step(step + 1)
 
-                if next_question.get("depends_on"):
-                    st.session_state.guided_step = next_step
+                if next_step < len(GUIDED_QUESTIONS):
+                    next_question = GUIDED_QUESTIONS[next_step]
+
+                    if next_question.get("depends_on"):
+                        st.session_state.guided_step = next_step
+                    else:
+                        st.session_state.editing_from_review = False
+                        st.session_state.guided_step = len(GUIDED_QUESTIONS)
                 else:
                     st.session_state.editing_from_review = False
                     st.session_state.guided_step = len(GUIDED_QUESTIONS)
+
+            elif st.session_state.get("editing_from_banner"):
+                st.session_state.editing_from_banner = False
+                st.session_state.guided_step = st.session_state.get(
+                    "return_step_after_banner_edit",
+                    next_guided_step(step + 1)
+                )
+
             else:
-                st.session_state.editing_from_review = False
-                st.session_state.guided_step = len(GUIDED_QUESTIONS)
+                st.session_state.guided_step = next_guided_step(step + 1)
 
-        elif st.session_state.get("editing_from_banner"):
-            st.session_state.editing_from_banner = False
-            st.session_state.guided_step = st.session_state.get(
-                "return_step_after_banner_edit",
-                next_guided_step(step + 1)
-            )
-
-        else:
-            st.session_state.guided_step = next_guided_step(step + 1)
-
-        st.rerun()
+            st.rerun()
 
     with col3:
         st.progress((step + 1) / total_steps)
