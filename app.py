@@ -464,6 +464,19 @@ def check_job_warnings(job, job_number):
     except:
         pass
 
+    
+       # -----------------------------
+    # Review checks / contradiction checks
+    # -----------------------------
+
+    duties_text = str(job.get("job_duties", "")).lower()
+    lifting_text = str(job.get("lifting_description", "")).lower()
+    interaction_text = str(job.get("interaction_details", "")).lower()
+
+
+    frequent_lift = str(job.get("frequent_lift", "")).lower()
+    other_frequent = str(job.get("other_frequent_lift_text", "")).lower()
+
     weight_words = [
         "lb", "lbs", "pound", "pounds",
         "10", "20", "25", "30", "40", "50", "75", "100"
@@ -474,18 +487,15 @@ def check_job_warnings(job, job_number):
         for word in weight_words
     )
 
+    frequent_is_zero = (
+        frequent_lift in ["0", "none", "no lifting", "less_than_1"]
+        or other_frequent.strip() in ["0", "0 lbs", "0 pounds", "none"]
+    )
+
     if mentions_weight and frequent_is_zero:
         warnings.append(
             f"Job {job_number}: Please review lifting answers — a weight is mentioned in the lifting description, but the frequently lifted weight appears to be zero or none."
-        )        
-
-       # -----------------------------
-    # Review checks / contradiction checks
-    # -----------------------------
-
-    duties_text = str(job.get("job_duties", "")).lower()
-    lifting_text = str(job.get("lifting_description", "")).lower()
-    interaction_text = str(job.get("interaction_details", "")).lower()
+        )
 
     # Interaction review check
     people_words = [
