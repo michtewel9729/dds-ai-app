@@ -1366,11 +1366,25 @@ def client_guided_mode():
                     st.session_state.guided_step = len(GUIDED_QUESTIONS)
 
             elif st.session_state.get("editing_from_banner"):
-                st.session_state.editing_from_banner = False
-                st.session_state.guided_step = st.session_state.get(
-                    "return_step_after_banner_edit",
-                    next_guided_step(step + 1)
-                )
+                next_step = next_guided_step(step + 1)
+
+                if next_step < len(GUIDED_QUESTIONS):
+                    next_question = GUIDED_QUESTIONS[next_step]
+
+                    if next_question.get("depends_on"):
+                        st.session_state.guided_step = next_step
+                    else:
+                        st.session_state.editing_from_banner = False
+                        st.session_state.guided_step = st.session_state.get(
+                            "return_step_after_banner_edit",
+                            next_guided_step(step + 1)
+                        )
+                else:
+                    st.session_state.editing_from_banner = False
+                    st.session_state.guided_step = st.session_state.get(
+                        "return_step_after_banner_edit",
+                        len(GUIDED_QUESTIONS)
+                    )
 
             else:
                 st.session_state.guided_step = next_guided_step(step + 1)
