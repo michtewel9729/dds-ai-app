@@ -1255,6 +1255,10 @@ def client_guided_mode():
 
     saved_voice_answer = st.session_state.get(voice_text_key, "")
 
+    if saved_voice_answer and str(answer).strip() != str(saved_voice_answer).strip():
+        st.session_state[voice_text_key] = ""
+        saved_voice_answer = ""
+
     if saved_voice_answer:
         st.info(f"Using voice answer: {saved_voice_answer}")
 
