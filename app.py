@@ -211,12 +211,23 @@ def save_case(jobs, mode_name):
     return filename, case_data
 
 
+def clear_review_dismissals():
+    keys_to_delete = [
+        key for key in st.session_state.keys()
+        if key.endswith("_dismissed")
+    ]
+
+    for key in keys_to_delete:
+        del st.session_state[key]
+
 def reset_guided_current_job():
+    clear_review_dismissals()
     st.session_state.guided_step = 0
     st.session_state.guided_job = empty_job()
 
 
 def reset_everything():
+    clear_review_dismissals()
     st.session_state.guided_step = 0
     st.session_state.guided_job_number = 1
     st.session_state.guided_job = empty_job()
@@ -818,7 +829,7 @@ def show_job_review(job, job_number):
         st.markdown("### Medical Conditions")
         st.info(job.get("medical_conditions") or "Not answered")
 
-def ask_help_assistant(user_question, current_form_question=""):
+def ask_help_assistant(user_question, current_form_question="", current_answer=""):
     if openai_client is None:
         return "OpenAI API key is missing. Please set OPENAI_API_KEY before using the help assistant."
 
@@ -833,9 +844,15 @@ Your role:
 - Do not provide legal advice.
 - Encourage estimates if the user does not remember exact details.
 - Keep answers short, calm, and supportive.
+- Help determine whether their answer may need more detail
+- Help users understand what the question is asking
 
 Current form question:
 {current_form_question}
+
+Current answer already entered:
+{current_answer}
+
 
 User's help question:
 {user_question}
@@ -859,12 +876,11 @@ def transcribe_audio(audio_file):
         model="gpt-4o-transcribe",
         file=audio_file,
         prompt=(
-            "This is a voice answer for a DDS Work History Report. "
-            "The speaker may mention job duties, employers, dates, hours, days per week, "
-            "standing, walking, sitting, stooping, kneeling, crouching, crawling, lifting, "
-            "carrying, reaching, handling, grasping, tools, equipment, customers, coworkers, "
-            "supervisors, symptoms, pain, fatigue, and environmental exposures. "
-            "Transcribe clearly and keep the user's words as spoken."
+            "This is a DDS Work History Report interview. "
+            "The speaker may say employer names, business names, stores, restaurants, "
+            "cleaning companies, clinics, warehouses, agencies, and people's names. "
+            "Transcribe exactly what is spoken. "
+            "Preserve company names and proper nouns."
         ),
     )
 
@@ -1238,7 +1254,18 @@ def client_guided_mode():
     answer = render_answer_input(question, current_value, unique_key)
 
     saved_voice_answer = st.session_state.get(voice_text_key, "")
-    answer_for_storage = saved_voice_answer if saved_voice_answer else answer
+
+    if saved_voice_answer:
+        st.info(f"Using voice answer: {saved_voice_answer}")
+
+        if st.button("Use typed answer instead", key=f"use_typed_{unique_key}"):
+            st.session_state[voice_text_key] = ""
+            set_guided_value(question, answer)
+            st.rerun()
+
+        answer_for_storage = saved_voice_answer
+    else:
+        answer_for_storage = answer
 
     set_guided_value(question, answer_for_storage)
 
@@ -1254,8 +1281,6 @@ def client_guided_mode():
             issue["target_step"]
         )
 
-    if saved_voice_answer:
-        st.info(f"Using voice answer: {saved_voice_answer}")
 
     if question["type"] in ["text", "textarea"]:
         with st.expander("🎤 Prefer to speak your answer?"):
@@ -1298,7 +1323,8 @@ def client_guided_mode():
                 if help_question.strip():
                     assistant_response = ask_help_assistant(
                         help_question,
-                        question.get("question", "")
+                        question.get("question", ""),
+                        get_guided_value(question)
                     )
                     st.info(assistant_response)
                 else:
@@ -1437,6 +1463,7 @@ Rules:
 - If something is unclear or missing, list it under "Review Items."
 - Use plain English.
 - Keep it organized and easy to scan.
+- Help users determine whether their answer may need more detail.
 
 Job data:
 {json.dumps(job, indent=2)}
