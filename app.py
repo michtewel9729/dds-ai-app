@@ -594,10 +594,33 @@ def check_job_warnings(job, job_number):
             except:
                 pass
 
-    if hours_worked is not None and total_physical_hours > hours_worked + 2:
+    if hours_worked is not None and total_physical_hours > hours_worked:
         warnings.append(
-            f"Job {job_number}: Please review — some activity times may be longer than the hours worked per day."
+            f"Job {job_number}: Please review physical activity times — total activity time "
+            f"appears to be about {total_physical_hours} hours, but hours worked per day is "
+            f"{hours_worked}."
         )
+
+
+    # Physical use contradiction checks
+    use_pairs = [
+        ("fingers_time", "fingers_hand_usage", "finger/hand use"),
+        ("grasping_time", "grasping_hand_usage", "grasping/holding"),
+        ("reaching_below_time", "reaching_below_arm_usage", "reaching at/below shoulder"),
+        ("reaching_overhead_time", "reaching_overhead_arm_usage", "reaching overhead"),
+    ]
+
+    none_values = ["none", "0", "0 minutes", "0 hours", "zero", "n/a", "na"]
+
+    for time_key, usage_key, label in use_pairs:
+        time_answer = str(physical.get(time_key, "")).lower().strip()
+        usage_answer = str(physical.get(usage_key, "")).lower().strip()
+
+        if time_answer in none_values and usage_answer not in ["none", ""]:
+            warnings.append(
+                f"Job {job_number}: Please review {label} — time is listed as none/zero, "
+                f"but hand/arm use is marked as {physical.get(usage_key)}."
+            )    
 
     return warnings
 
