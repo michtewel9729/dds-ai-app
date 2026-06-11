@@ -1020,8 +1020,10 @@ def check_in_flow_review_issues(job, current_question_key):
         "equipment", "supplies"
     ]
 
-    if current_question_key == "job_duties":
-        if job.get("interacted_with_people") == "No":
+    if current_question_key in ["interaction_details", "standing_walking"]:
+        interaction_answer = job.get("interacted_with_people")
+
+        if interaction_answer == "No":
             if any(word in duties_text for word in people_words):
                 issues.append({
                     "issue_id": "people_interaction_review",
