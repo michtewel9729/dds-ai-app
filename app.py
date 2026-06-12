@@ -1251,11 +1251,18 @@ def client_guided_mode():
 
     voice_text_key = f"{unique_key}_voice_text"
 
+    pending_voice_key = f"{unique_key}_pending_voice"
+
+    if st.session_state.get(pending_voice_key):
+        current_value = st.session_state[pending_voice_key]
+        st.session_state[unique_key] = current_value
+        del st.session_state[pending_voice_key]
+
     answer = render_answer_input(question, current_value, unique_key)
 
     saved_voice_answer = st.session_state.get(voice_text_key, "")
 
-    if saved_voice_answer and str(answer).strip() != str(saved_voice_answer).strip():
+    if saved_voice_answer and str(answer).strip() and str(answer).strip() != str(saved_voice_answer).strip():
         st.session_state[voice_text_key] = ""
         saved_voice_answer = ""
 
@@ -1307,10 +1314,12 @@ def client_guided_mode():
 
                     if transcript:
                         st.session_state[voice_text_key] = transcript
+                        st.session_state[f"{unique_key}_pending_voice"] = transcript
                         set_guided_value(question, transcript)
 
                         st.success("Voice answer added. Click Next to continue.")
                         st.info(transcript)
+                        st.rerun()
 
                     else:
                         st.warning("No transcript was created. Please try again.")
