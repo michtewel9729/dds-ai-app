@@ -1141,7 +1141,40 @@ def show_job_memory_summary():
     if not has_any_info:
         return
 
+def needs_time_unit(question, answer):
+    time_question_keys = [
+        "standing_walking",
+        "sitting",
+        "stooping",
+        "kneeling",
+        "crouching",
+        "crawling",
+        "fingers_time",
+        "grasping_time",
+        "reaching_below_time",
+        "reaching_overhead_time",
+        "stairs",
+        "ladders",
+    ]
 
+    if question.get("key") not in time_question_keys:
+        return False
+
+    clean = str(answer or "").strip().lower()
+
+    allowed_words = [
+        "hour", "hours", "hr", "hrs",
+        "minute", "minutes", "min", "mins",
+        "none", "n/a", "na", "unknown", "varied", "rarely"
+    ]
+
+    if clean.isdigit():
+        return True
+
+    if clean and not any(word in clean for word in allowed_words):
+        return True
+
+    return False
 
 
 
@@ -1357,6 +1390,16 @@ def client_guided_mode():
         next_label = "Finish Job" if step == total_steps - 1 else "Next"
 
         if st.button(next_label, use_container_width=True):
+            
+            answer_to_check = get_guided_value(question)
+
+            if needs_time_unit(question, answer_to_check):
+                st.warning(
+                    "Please include a time type, such as hours or minutes. "
+                    "Example: 6 hours, 30 minutes, none, or unknown."
+                )
+                st.stop()
+
 
             if question.get("check_type"):
                 answer_to_validate = str(get_guided_value(question)).strip()
