@@ -1431,8 +1431,8 @@ def client_guided_mode():
 
                         if status == "Needs Follow-Up":
                             st.warning(
-                                follow_up or
-                                "This answer needs a little more detail."
+                                "⚠️ Please add more detail before moving forward.\n\n"
+                                + (follow_up or "This answer needs a little more detail.")
                             )
                             st.stop()
 
