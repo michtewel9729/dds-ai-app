@@ -1020,6 +1020,11 @@ def show_in_flow_review_banner(issue_id, message, target_step):
     if st.session_state.get(dismissed_key):
         return
 
+    message = (
+        "⚠️ Please add more detail before moving forward.\n\n"
+        + message
+    )
+
     st.warning(message)
 
     col_a, col_b = st.columns(2)
@@ -1074,11 +1079,19 @@ def check_in_flow_review_issues(job, current_question_key):
                     "target_step": find_question_step("interacted_with_people")
                 })
 
-    if current_question_key == "frequent_lift":
+    if current_question_key == "other_frequent_lift_text":
 
         if any(word in f"{duties_text} {lifting_text}" for word in lift_words):
 
-            if not job.get("heaviest_lift") or not job.get("frequent_lift"):
+            frequent_lift = str(job.get("frequent_lift", "")).strip().lower()
+            other_frequent = str(job.get("other_frequent_lift_text", "")).strip().lower()
+
+            frequent_is_zero_or_blank = (
+                frequent_lift in ["", "less_than_1", "0", "none", "no lifting"]
+                or other_frequent in ["0", "0 lbs", "0 pounds", "none", "no lifting"]
+            )
+
+            if frequent_is_zero_or_blank:
 
                 issues.append({
                     "issue_id": "lifting_review",
@@ -1475,6 +1488,32 @@ def client_guided_mode():
 
     with col3:
         st.progress((step + 1) / total_steps)
+
+        visible_steps = [
+            (i, q)
+            for i, q in enumerate(GUIDED_QUESTIONS)
+            if should_show_guided_question(q)
+        ]
+
+        jump_options = [
+            f"{i + 1}. {q['question']}"
+            for i, q in visible_steps
+        ]
+
+        selected_jump = st.selectbox(
+            "Review an earlier question",
+            ["Stay here"] + jump_options,
+            key=f"jump_question_{st.session_state.guided_job_number}_{step}"
+        )
+
+        if selected_jump != "Stay here":
+            selected_index = int(selected_jump.split(".")[0]) - 1
+
+            if selected_index <= step:
+                st.session_state.guided_step = selected_index
+                st.rerun()
+            else:
+                st.warning("You can only jump back to questions you already reached.")
 
 def generate_case_pdf(jobs, output_path="work_history_report.pdf"):
     case_data = {
