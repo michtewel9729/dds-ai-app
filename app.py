@@ -93,6 +93,54 @@ def guided_date_picker(label, key_prefix, current_value=""):
 
     return current_value
 
+def is_acceptable_time_answer(answer):
+    if not answer:
+        return False
+
+    answer = answer.lower().strip()
+
+    accepted_phrases = [
+        "most of the day",
+        "all day",
+        "half the day",
+        "half day",
+        "part of the day",
+        "none",
+        "no",
+        "0",
+        "zero",
+        "unknown",
+        "not sure",
+        "unsure",
+        "rarely",
+        "occasionally",
+        "most of the time",
+        "majority of the day",
+        "majority of the time",
+        "almost all day",
+        "almost all of the day",
+        "almost all of the time",
+    ]
+
+    time_words = [
+        "hour",
+        "hours",
+        "hr",
+        "hrs",
+        "minute",
+        "minutes",
+        "min",
+        "mins",
+    ]
+
+    if any(phrase in answer for phrase in accepted_phrases):
+        return True
+
+    if any(word in answer for word in time_words):
+        return True
+
+    return False
+
 
 def empty_job():
     return {
@@ -1155,6 +1203,7 @@ def show_job_memory_summary():
         return
 
 def needs_time_unit(question, answer):
+
     time_question_keys = [
         "standing_walking",
         "sitting",
@@ -1173,21 +1222,7 @@ def needs_time_unit(question, answer):
     if question.get("key") not in time_question_keys:
         return False
 
-    clean = str(answer or "").strip().lower()
-
-    allowed_words = [
-        "hour", "hours", "hr", "hrs",
-        "minute", "minutes", "min", "mins",
-        "none", "n/a", "na", "unknown", "varied", "rarely"
-    ]
-
-    if clean.isdigit():
-        return True
-
-    if clean and not any(word in clean for word in allowed_words):
-        return True
-
-    return False
+    return not is_acceptable_time_answer(answer)
 
 
 
@@ -1513,7 +1548,7 @@ def client_guided_mode():
                 st.session_state.guided_step = selected_index
                 st.rerun()
             else:
-                st.warning("You can only jump back to questions you already reached.")
+                st.warning("You can only jump to questions you already reached.")
 
 def generate_case_pdf(jobs, output_path="work_history_report.pdf"):
     case_data = {
