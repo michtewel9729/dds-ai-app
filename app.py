@@ -320,10 +320,10 @@ GUIDED_QUESTIONS = [
     {"key": "other_lift_text","target": "job","icon": "🏋️","question": "What was the heaviest weight you lifted?","helper": "Since you selected Other, type the amount. Example: 75 pounds, 80 pounds, or unknown.","type": "text","depends_on": {"key": "heaviest_lift", "value": "other"}},
     {"key": "frequent_lift", "target": "job", "icon": "📦", "question": "What weight did you frequently lift?", "helper": "Choose the closest estimate.", "type": "select", "options": ["", "less_than_1", "less_than_10", "10", "25", "50_or_more", "other"]},
     {"key": "other_frequent_lift_text","target": "job","icon": "📦","question": "What weight did you frequently lift?","helper": "Since you selected Other, type the amount. Example: 75 pounds, 80 pounds, or unknown.","type": "text","depends_on": {"key": "frequent_lift", "value": "other"}},
-    {"key": "exposure_checkboxes","target": "exposures","icon": "⚠️","question": "Which environmental exposures did this job have?","helper": "Select all that apply. If none apply, leave this blank and explain None on the next question.", "type": "multiselect","options": ["outdoors","heat","cold","wetness","humidity","hazardous_substances","moving_parts","heights","vibrations","loud_noise","other",],
+    {"key": "exposure_checkboxes","target": "exposures","icon": "⚠️","question": "Which of these workplace conditions applied to this job?","helper": "Select all that apply. Examples: loud noise, heat, cold, moving machinery, chemicals, working outside, or working at heights. If none apply, leave this blank and explain None on the next question.", "type": "multiselect","options": ["outdoors","heat","cold","wetness","humidity","hazardous_substances","moving_parts","heights","vibrations","loud_noise","other",],
      },
-     {"key": "other_exposure_text","target": "job","icon": "⚠️","question": "What other exposure did this job have?","helper": "Since you selected Other, describe the exposure. Example: dust, fumes, smoke, chemicals, strong smells, poor ventilation, or unknown.","type": "text","depends_on": {"key": "exposure_checkboxes", "contains": "other"},},
-    {"key": "exposure_description", "target": "job", "icon": "⚠️", "question": "Were you exposed to heat, cold, wetness, fumes, noise, heights, moving machinery, or other hazards?", "helper": "If none, write None. If yes, describe what you were exposed to and how often.", "type": "textarea"},
+     {"key": "other_exposure_text","target": "job","icon": "⚠️","question": "What other workplace condition should we add?","helper": "Only answer this if you selected Other. Example: dust, fumes, smoke, chemicals, strong smells, poor ventilation, or unknown.","type": "text","depends_on": {"key": "exposure_checkboxes", "contains": "other"},},
+    {"key": "exposure_description", "target": "job", "icon": "⚠️", "question": "Please describe the workplace conditions you selected.", "helper": "Example: Worked around loud machinery most of the day, worked outside in extreme heat, used cleaning chemicals, or None.", "type": "textarea"},
     {"key": "medical_conditions", "target": "job", "icon": "🩺", "question": "How did your medical conditions affect your ability to do this job?", "helper": "Example: Back pain made standing and lifting difficult. If not applicable, write None.", "type": "textarea", "check_type": "medical_conditions"},
     {"key": "extra_notes", "target": "job", "icon": "📌", "question": "Is there anything else important about this job?", "helper": "Add anything that helps explain the work. You can also write none.", "type": "textarea"},
 ]
@@ -1202,6 +1202,79 @@ def show_job_memory_summary():
     if not has_any_info:
         return
 
+def apply_guided_autofill(question):
+    job = st.session_state.guided_job
+    physical = job["physical_activities"]
+
+    key = question.get("key")
+
+    none_answers = [
+        "none",
+        "no",
+        "0",
+        "0 hours",
+        "0 minutes",
+        "zero",
+        "n/a",
+        "na",
+    ]
+
+    def is_none_answer(value):
+        return str(value or "").strip().lower() in none_answers
+
+    if key == "fingers_time" and is_none_answer(physical.get("fingers_time")):
+        physical["fingers_hand_usage"] = "None"
+
+    if key == "grasping_time" and is_none_answer(physical.get("grasping_time")):
+        physical["grasping_hand_usage"] = "None"
+
+    if key == "reaching_below_time" and is_none_answer(physical.get("reaching_below_time")):
+        physical["reaching_below_arm_usage"] = "None"
+
+    if key == "reaching_overhead_time" and is_none_answer(physical.get("reaching_overhead_time")):
+        physical["reaching_overhead_arm_usage"] = "None"
+
+
+
+
+
+def should_skip_after_autofill(question):
+    job = st.session_state.guided_job
+    physical = job["physical_activities"]
+
+    key = question.get("key")
+
+    none_answers = [
+        "none",
+        "no",
+        "0",
+        "0 hours",
+        "0 minutes",
+        "zero",
+        "n/a",
+        "na",
+    ]
+
+    def is_none_answer(value):
+        return str(value or "").strip().lower() in none_answers
+
+    if key == "fingers_time" and is_none_answer(physical.get("fingers_time")):
+        return True
+
+    if key == "grasping_time" and is_none_answer(physical.get("grasping_time")):
+        return True
+
+    if key == "reaching_below_time" and is_none_answer(physical.get("reaching_below_time")):
+        return True
+
+    if key == "reaching_overhead_time" and is_none_answer(physical.get("reaching_overhead_time")):
+        return True
+
+    return False
+
+
+
+
 def needs_time_unit(question, answer):
 
     time_question_keys = [
@@ -1360,6 +1433,9 @@ def client_guided_mode():
         answer_for_storage = answer
 
     set_guided_value(question, answer_for_storage)
+    apply_guided_autofill(question)
+
+
 
     issues = check_in_flow_review_issues(
         st.session_state.guided_job,
@@ -1517,7 +1593,12 @@ def client_guided_mode():
                     )
 
             else:
-                st.session_state.guided_step = next_guided_step(step + 1)
+                next_step = next_guided_step(step + 1)
+
+                if should_skip_after_autofill(question):
+                    next_step = next_guided_step(next_step + 1)
+
+                st.session_state.guided_step = next_step
 
             st.rerun()
 
