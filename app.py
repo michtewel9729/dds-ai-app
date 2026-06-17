@@ -272,6 +272,7 @@ def reset_guided_current_job():
     clear_review_dismissals()
     st.session_state.guided_step = 0
     st.session_state.guided_job = empty_job()
+    st.session_state.inline_extraction_completed_for_job = False
 
 
 def reset_everything():
@@ -1298,6 +1299,51 @@ def needs_time_unit(question, answer):
     return not is_acceptable_time_answer(answer)
 
 
+def extract_inline_job_details(answer_text):
+    if openai_client is None:
+        return {}
+
+    if not str(answer_text).strip():
+        return {}
+
+    prompt = f"""
+You are extracting job details from a user's answer in a DDS Work History app.
+
+Return ONLY JSON.
+
+Required JSON keys:
+job_title, employer, dates_from, dates_to, pay_rate, pay_type
+
+Rules:
+- Do not guess.
+- Only extract details clearly stated.
+- If missing, use "".
+- Convert dates like "March 2025" or "5/2022" into readable form.
+- pay_type must be: hour, day, week, month, year, or "".
+
+User answer:
+{answer_text}
+"""
+
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+
+        return json.loads(response.choices[0].message.content)
+
+    except Exception as e:
+        st.warning("Inline extraction failed.")
+        st.write(str(e))
+        return {}
+
+
+
+
+
 
 def client_guided_mode():
     st.title("DDS AI App")
@@ -1437,6 +1483,30 @@ def client_guided_mode():
 
 
 
+    if st.session_state.get("inline_extracted_details"):
+        st.info("✨ I found some details in your answer.")
+
+        for key, value in st.session_state.inline_extracted_details.items():
+            st.write(f"**{key.replace('_', ' ').title()}:** {value}")
+   
+        extraction_done_key = f"{unique_key}_inline_extraction_done"
+
+        if st.button("Apply These Details"):
+            for key, value in st.session_state.inline_extracted_details.items():
+                st.session_state.guided_job[key] = value
+
+            st.session_state.inline_extracted_details = {}
+            st.session_state[extraction_done_key] = True
+            st.session_state.inline_extraction_completed_for_job = True
+            st.success("Details applied.")
+            st.rerun()
+
+        if st.button("Ignore These Details"):
+            st.session_state.inline_extracted_details = {}
+            st.session_state[extraction_done_key] = True
+            st.rerun()
+
+
     issues = check_in_flow_review_issues(
         st.session_state.guided_job,
         question["key"]
@@ -1516,6 +1586,25 @@ def client_guided_mode():
         if st.button(next_label, use_container_width=True):
             
             answer_to_check = get_guided_value(question)
+
+
+            extraction_done_key = f"{unique_key}_inline_extraction_done"
+
+            if (
+                question["key"] in ["job_title", "employer", "dates_from", "dates_to"]
+                and not st.session_state.get(extraction_done_key)
+                and not st.session_state.get("inline_extraction_completed_for_job")
+            ):
+                extracted = extract_inline_job_details(str(answer_to_check))
+
+                useful_extracted = {
+                    k: v for k, v in extracted.items()
+                    if v and k in st.session_state.guided_job
+                }
+
+                if useful_extracted:
+                    st.session_state.inline_extracted_details = useful_extracted
+                    st.rerun()
 
             if needs_time_unit(question, answer_to_check):
                 st.warning(
