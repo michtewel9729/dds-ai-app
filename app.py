@@ -273,6 +273,7 @@ def reset_guided_current_job():
     st.session_state.guided_step = 0
     st.session_state.guided_job = empty_job()
     st.session_state.inline_extraction_completed_for_job = False
+    st.session_state.duties_extraction_completed_for_job = False
 
 
 def reset_everything():
@@ -1339,6 +1340,47 @@ User answer:
         st.warning("Inline extraction failed.")
         st.write(str(e))
         return {}
+    
+
+def extract_details_from_job_duties(answer_text):
+    if openai_client is None:
+        return {}
+
+    if not str(answer_text).strip():
+        return {}
+
+    prompt = f"""
+Extract only clearly stated details from this job duties answer.
+
+Return ONLY JSON with these keys:
+equipment, exposure_description, medical_conditions
+
+Rules:
+- Do not guess.
+- If not clearly stated, use "".
+- equipment = tools, machines, supplies, or equipment used.
+- exposure_description = workplace conditions or exposures like chemicals, fumes, loud noise, heat, cold, dust, heights, moving machinery.
+- medical_conditions = how health symptoms or conditions affected the job.
+- Do not include explanations.
+
+Job duties answer:
+{answer_text}
+"""
+
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            response_format={"type": "json_object"},
+        )
+
+        return json.loads(response.choices[0].message.content)
+
+    except Exception as e:
+        st.warning("Duties extraction failed.")
+        st.write(str(e))
+        return {}    
 
 
 
@@ -1507,6 +1549,31 @@ def client_guided_mode():
             st.rerun()
 
 
+    if st.session_state.get("duties_extracted_details"):
+        st.info("✨ I found some possible details from your workday answer.")
+
+        for key, value in st.session_state.duties_extracted_details.items():
+            if str(value).strip():
+                st.write(f"**{key.replace('_', ' ').title()}:** {value}")
+
+        duties_done_key = f"{unique_key}_duties_extraction_done"
+
+        if st.button("Apply These Suggestions"):
+            for key, value in st.session_state.duties_extracted_details.items():
+                if key in st.session_state.guided_job and str(value).strip():
+                    st.session_state.guided_job[key] = value
+
+            st.session_state[duties_done_key] = True
+            st.session_state.duties_extraction_completed_for_job = True
+            st.success("Suggestions applied.")
+            st.rerun()
+
+        if st.button("Ignore These Suggestions"):
+            st.session_state.duties_extracted_details = {}
+            st.session_state[duties_done_key] = True
+            st.rerun()
+
+
     issues = check_in_flow_review_issues(
         st.session_state.guided_job,
         question["key"]
@@ -1591,7 +1658,7 @@ def client_guided_mode():
             extraction_done_key = f"{unique_key}_inline_extraction_done"
 
             if (
-                question["key"] in ["job_title", "employer", "dates_from", "dates_to"]
+                question["key"] == "job_title"
                 and not st.session_state.get(extraction_done_key)
                 and not st.session_state.get("inline_extraction_completed_for_job")
             ):
@@ -1605,6 +1672,26 @@ def client_guided_mode():
                 if useful_extracted:
                     st.session_state.inline_extracted_details = useful_extracted
                     st.rerun()
+
+            duties_done_key = f"{unique_key}_duties_extraction_done"
+
+            if (
+                question["key"] == "job_duties"
+                and not st.session_state.get(duties_done_key)
+            ):
+                extracted = extract_details_from_job_duties(str(answer_to_check))
+
+                useful_extracted = {
+                    k: v for k, v in extracted.items()
+                    if v and k in st.session_state.guided_job
+                }
+
+                if useful_extracted:
+                    st.session_state.duties_extracted_details = useful_extracted
+                    st.rerun()        
+
+
+
 
             if needs_time_unit(question, answer_to_check):
                 st.warning(
