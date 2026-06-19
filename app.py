@@ -1670,7 +1670,15 @@ def client_guided_mode():
                     if v and k in st.session_state.guided_job
                 }
 
-                if useful_extracted:
+                meaningful_extractions = [
+                    "employer",
+                    "dates_from",
+                    "dates_to",
+                    "pay_rate",
+                    "pay_type",
+                ]
+
+                if any(useful_extracted.get(key) for key in meaningful_extractions):
                     st.session_state.inline_extracted_details = useful_extracted
                     st.rerun()
 
