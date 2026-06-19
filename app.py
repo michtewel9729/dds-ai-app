@@ -1563,6 +1563,7 @@ def client_guided_mode():
                 if key in st.session_state.guided_job and str(value).strip():
                     st.session_state.guided_job[key] = value
 
+            st.session_state.duties_extracted_details = {}
             st.session_state[duties_done_key] = True
             st.session_state.duties_extraction_completed_for_job = True
             st.success("Suggestions applied.")
@@ -1678,6 +1679,7 @@ def client_guided_mode():
             if (
                 question["key"] == "job_duties"
                 and not st.session_state.get(duties_done_key)
+                and not st.session_state.get("duties_extraction_completed_for_job")
             ):
                 extracted = extract_details_from_job_duties(str(answer_to_check))
 
