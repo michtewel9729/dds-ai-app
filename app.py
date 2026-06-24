@@ -216,6 +216,7 @@ def init_session_state():
 init_session_state()
 
 
+
 def is_blank(value):
     if value is None:
         return True
@@ -1524,18 +1525,43 @@ def client_guided_mode():
     apply_guided_autofill(question)
 
 
-
     if st.session_state.get("inline_extracted_details"):
         st.info("✨ I found some details in your answer.")
 
         for key, value in st.session_state.inline_extracted_details.items():
             st.write(f"**{key.replace('_', ' ').title()}:** {value}")
-   
+
         extraction_done_key = f"{unique_key}_inline_extraction_done"
 
         if st.button("Apply These Details"):
             for key, value in st.session_state.inline_extracted_details.items():
-                st.session_state.guided_job[key] = value
+                if key == "pay_type":
+                    clean_value = str(value).lower().strip().replace(".", "")
+
+                    pay_type_map = {
+                        "hourly": "hour",
+                        "per hour": "hour",
+                        "hour": "hour",
+                        "daily": "day",
+                        "per day": "day",
+                        "day": "day",
+                        "weekly": "week",
+                        "per week": "week",
+                        "week": "week",
+                        "monthly": "month",
+                        "per month": "month",
+                        "month": "month",
+                        "yearly": "year",
+                        "annually": "year",
+                        "annual": "year",
+                        "per year": "year",
+                        "a year": "year",
+                        "year": "year",
+                    }
+
+                    st.session_state.guided_job[key] = pay_type_map.get(clean_value, value)
+                else:
+                    st.session_state.guided_job[key] = value
 
             st.session_state.inline_extracted_details = {}
             st.session_state[extraction_done_key] = True
