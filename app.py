@@ -8,6 +8,7 @@ import os
 from openai import OpenAI
 import json
 from ai_validation_engine import validate_answer
+import re
 
 
 
@@ -1846,67 +1847,60 @@ def client_guided_mode():
 def normalize_job_for_pdf(job):
     clean_job = repair_job(job).copy()
 
-    # Clean job title if user wrote a full sentence
-    title_text = str(clean_job.get("job_title", "")).strip()
-    if " as a " in title_text.lower():
-        clean_job["job_title"] = title_text.lower().split(" as a ")[-1].strip().title()
-
     # Clean pay rate
     pay_text = str(clean_job.get("pay_rate", "")).strip()
-    clean_job["pay_rate"] = (
-        pay_text
-        .replace("I was paid", "")
-        .replace("i was paid", "")
-        .replace("$", "")
-        .replace(",", "")
-        .replace("per hour", "")
-        .replace("an hour", "")
-        .replace("a hour", "")
-        .replace("per year", "")
-        .replace("a year", "")
-        .replace("per month", "")
-        .replace("a month", "")
-        .replace("per week", "")
-        .replace("a week", "")
-        .strip()
-    )
+    pay_text_lower = pay_text.lower()
+
+    number_match = re.search(r"\$?\s*([\d,]+(?:\.\d+)?)", pay_text)
+
+    if number_match:
+        clean_job["pay_rate"] = number_match.group(1).replace(",", "")
 
     # Clean pay type
-    pay_type_text = f"{pay_text} {clean_job.get('pay_type', '')}".lower()
+    combined_pay_text = f"{pay_text_lower} {str(clean_job.get('pay_type', '')).lower()}"
 
-    if "year" in pay_type_text or "annual" in pay_type_text:
+    if "year" in combined_pay_text or "annual" in combined_pay_text or "annually" in combined_pay_text:
         clean_job["pay_type"] = "year"
-    elif "month" in pay_type_text:
+    elif "month" in combined_pay_text or "monthly" in combined_pay_text:
         clean_job["pay_type"] = "month"
-    elif "week" in pay_type_text:
+    elif "week" in combined_pay_text or "weekly" in combined_pay_text:
         clean_job["pay_type"] = "week"
-    elif "day" in pay_type_text:
+    elif "day" in combined_pay_text or "daily" in combined_pay_text:
         clean_job["pay_type"] = "day"
-    elif "hour" in pay_type_text or "hourly" in pay_type_text:
+    elif "hour" in combined_pay_text or "hourly" in combined_pay_text:
         clean_job["pay_type"] = "hour"
 
     # Clean hours per day
     hours_text = str(clean_job.get("hours_per_day", "")).lower().strip()
+
     number_words = {
         "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
         "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
         "eleven": "11", "twelve": "12",
     }
 
-    for word, number in number_words.items():
-        if word in hours_text:
-            clean_job["hours_per_day"] = number
-            break
+    hour_number = re.search(r"(\d+)", hours_text)
+    if hour_number:
+        clean_job["hours_per_day"] = hour_number.group(1)
+    else:
+        for word, number in number_words.items():
+            if word in hours_text:
+                clean_job["hours_per_day"] = number
+                break
 
     # Clean days per week
     days_text = str(clean_job.get("days_per_week", "")).lower().strip()
 
-    for word, number in number_words.items():
-        if word in days_text:
-            clean_job["days_per_week"] = number
-            break
+    day_number = re.search(r"(\d+)", days_text)
+    if day_number:
+        clean_job["days_per_week"] = day_number.group(1)
+    else:
+        for word, number in number_words.items():
+            if word in days_text:
+                clean_job["days_per_week"] = number
+                break
 
-    return clean_job               
+    return clean_job           
 
 def generate_case_pdf(jobs, output_path="work_history_report.pdf"):
     case_data = {
