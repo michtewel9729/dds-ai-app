@@ -21,13 +21,16 @@ INPUT_PDF = "data/raw_forms/Work History Report 3369.pdf"
 
 def escape_fdf(value):
     value = "" if value is None else str(value)
+
+    # Remove characters FDF/PDF cannot safely write
+    value = value.encode("latin-1", errors="replace").decode("latin-1")
+
     return (
         value.replace("\\", "\\\\")
         .replace("(", "\\(")
         .replace(")", "\\)")
         .replace("\r", "")
     )
-
 
 def make_fdf(field_values):
     lines = [
