@@ -876,7 +876,7 @@ def show_job_review(job, job_number):
 
         st.markdown("### Medical Conditions")
         st.info(job.get("medical_conditions") or "Not answered")
-        
+
 def ask_help_assistant(user_question, current_form_question="", current_answer=""):
     if openai_client is None:
         return "OpenAI API key is missing. Please set OPENAI_API_KEY before using the help assistant."
@@ -1781,7 +1781,12 @@ def client_guided_mode():
             if question.get("check_type"):
                 answer_to_validate = str(get_guided_value(question)).strip()
 
-                if answer_to_validate:
+                none_like_answers = ["none", "no", "n/a", "na", "not applicable"]
+
+                if question["key"] == "equipment" and answer_to_validate.lower() in none_like_answers:
+                    pass
+
+                elif answer_to_validate:
                     validation_text = validate_answer(
                         answer_to_validate,
                         question["check_type"]
