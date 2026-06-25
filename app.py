@@ -98,7 +98,7 @@ def is_acceptable_time_answer(answer):
     if not answer:
         return False
 
-    answer = answer.lower().strip()
+    answer = str(answer).lower().strip()
 
     accepted_phrases = [
         "most of the day",
@@ -108,8 +108,6 @@ def is_acceptable_time_answer(answer):
         "part of the day",
         "none",
         "no",
-        "0",
-        "zero",
         "unknown",
         "not sure",
         "unsure",
@@ -123,22 +121,20 @@ def is_acceptable_time_answer(answer):
         "almost all of the time",
     ]
 
-    time_words = [
-        "hour",
-        "hours",
-        "hr",
-        "hrs",
-        "minute",
-        "minutes",
-        "min",
-        "mins",
-    ]
-
     if any(phrase in answer for phrase in accepted_phrases):
         return True
 
+    time_words = [
+        "hour", "hours", "hr", "hrs",
+        "minute", "minutes", "min", "mins"
+    ]
+
     if any(word in answer for word in time_words):
         return True
+
+    # If it's only a number like "30", reject it.
+    if re.fullmatch(r"\d+(\.\d+)?", answer):
+        return False
 
     return False
 
