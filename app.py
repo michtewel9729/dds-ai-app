@@ -1706,6 +1706,20 @@ def client_guided_mode():
             
             answer_to_check = get_guided_value(question)
 
+            if question["key"] == "pay_rate":
+                pay_text = str(answer_to_check).lower()
+
+                if "year" in pay_text or "annual" in pay_text or "annually" in pay_text:
+                    st.session_state.guided_job["pay_type"] = "year"
+                elif "month" in pay_text or "monthly" in pay_text:
+                    st.session_state.guided_job["pay_type"] = "month"
+                elif "week" in pay_text or "weekly" in pay_text:
+                    st.session_state.guided_job["pay_type"] = "week"
+                elif "day" in pay_text or "daily" in pay_text:
+                    st.session_state.guided_job["pay_type"] = "day"
+                elif "hour" in pay_text or "hourly" in pay_text:
+                    st.session_state.guided_job["pay_type"] = "hour"
+
 
             extraction_done_key = f"{unique_key}_inline_extraction_done"
 
