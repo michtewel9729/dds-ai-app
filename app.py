@@ -1847,6 +1847,18 @@ def client_guided_mode():
 def normalize_job_for_pdf(job):
     clean_job = repair_job(job).copy()
 
+    title_text = str(clean_job.get("job_title", "")).strip()
+    title_lower = title_text.lower()
+
+    if "house cleaner" in title_lower:
+        clean_job["job_title"] = "House Cleaner"
+    elif "cleaner" in title_lower:
+        clean_job["job_title"] = "Cleaner"
+    elif "cook" in title_lower:
+        clean_job["job_title"] = "Cook"
+    elif "cashier" in title_lower:
+        clean_job["job_title"] = "Cashier"
+
     # Clean pay rate
     pay_text = str(clean_job.get("pay_rate", "")).strip()
     pay_text_lower = pay_text.lower()
@@ -1903,8 +1915,10 @@ def normalize_job_for_pdf(job):
     return clean_job           
 
 def generate_case_pdf(jobs, output_path="work_history_report.pdf"):
+    clean_jobs = [normalize_job_for_pdf(job) for job in jobs]
+
     case_data = {
-        "jobs": [normalize_job_for_pdf(job) for job in jobs],
+        "jobs": clean_jobs,
         "client_name": "",
         "ssn": "",
         "primary_phone": "",
@@ -1923,7 +1937,6 @@ def generate_case_pdf(jobs, output_path="work_history_report.pdf"):
     }
 
     fill_work_history_pdf(case_data, output_path)
-
     return output_path
 
 def generate_case_manager_summary(job):
@@ -2165,6 +2178,10 @@ def case_manager_mode():
         st.success(f"Case saved locally: {filename}")
 
     if st.button("Generate PDF", use_container_width=True):
+
+        st.write("DEBUG JOBS:")
+        st.json(st.session_state.jobs)
+
         st.session_state.generated_pdf_path = generate_case_pdf(
             st.session_state.jobs
         )
