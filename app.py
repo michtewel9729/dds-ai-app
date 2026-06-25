@@ -1312,17 +1312,23 @@ def extract_inline_job_details(answer_text):
     prompt = f"""
 You are extracting job details from a user's answer in a DDS Work History app.
 
-Return ONLY JSON.
-
-Required JSON keys:
+Return ONLY valid JSON with these exact keys:
 job_title, employer, dates_from, dates_to, pay_rate, pay_type
 
 Rules:
 - Do not guess.
-- Only extract details clearly stated.
 - If missing, use "".
-- Convert dates like "March 2025" or "5/2022" into readable form.
-- pay_type must be: hour, day, week, month, year, or "".
+- job_title should be only the job title, not the full sentence.
+- employer should be only the company/person/business name.
+- pay_rate should be only the number or range, without words. Examples: "18", "13000", "18-20".
+- pay_type must be exactly one of: hour, day, week, month, year, or "".
+- If the answer says "a year", "per year", "yearly", "annual", "annually", or "salary", pay_type must be "year".
+- If the answer says "a month", "per month", or "monthly", pay_type must be "month".
+- If the answer says "a week", "per week", or "weekly", pay_type must be "week".
+- If the answer says "a day", "per day", or "daily", pay_type must be "day".
+- If the answer says "an hour", "per hour", "hourly", "hr", or "/hr", pay_type must be "hour".
+- Convert dates like "5/2022" to "May 2022" if possible.
+- Do not include explanations.
 
 User answer:
 {answer_text}
@@ -1540,24 +1546,42 @@ def client_guided_mode():
                     clean_value = str(value).lower().strip().replace(".", "")
 
                     pay_type_map = {
+                        # Hour
+                        "hour": "hour",
                         "hourly": "hour",
                         "per hour": "hour",
-                        "hour": "hour",
+                        "an hour": "hour",
+                        "a hour": "hour",
+                        "hr": "hour",
+                        "hrs": "hour",
+                        "/hr": "hour",
+
+                        # Day
+                        "day": "day",
                         "daily": "day",
                         "per day": "day",
-                        "day": "day",
+                        "a day": "day",
+
+                        # Week
+                        "week": "week",
                         "weekly": "week",
                         "per week": "week",
-                        "week": "week",
+                        "a week": "week",
+
+                        # Month
+                        "month": "month",
                         "monthly": "month",
                         "per month": "month",
-                        "month": "month",
+                        "a month": "month",
+
+                        # Year
+                        "year": "year",
                         "yearly": "year",
-                        "annually": "year",
                         "annual": "year",
+                        "annually": "year",
+                        "salary": "year",
                         "per year": "year",
                         "a year": "year",
-                        "year": "year",
                     }
 
                     st.session_state.guided_job[key] = pay_type_map.get(clean_value, value)
@@ -2178,10 +2202,6 @@ def case_manager_mode():
         st.success(f"Case saved locally: {filename}")
 
     if st.button("Generate PDF", use_container_width=True):
-
-        st.write("DEBUG JOBS:")
-        st.json(st.session_state.jobs)
-
         st.session_state.generated_pdf_path = generate_case_pdf(
             st.session_state.jobs
         )
