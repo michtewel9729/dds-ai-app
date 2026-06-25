@@ -876,10 +876,12 @@ def show_job_review(job, job_number):
 
         st.markdown("### Medical Conditions")
         st.info(job.get("medical_conditions") or "Not answered")
-
+        
 def ask_help_assistant(user_question, current_form_question="", current_answer=""):
     if openai_client is None:
         return "OpenAI API key is missing. Please set OPENAI_API_KEY before using the help assistant."
+
+    job_context = repair_job(st.session_state.guided_job)
 
     prompt = f"""
 You are a helpful assistant inside a DDS Work History Report app.
@@ -892,8 +894,10 @@ Your role:
 - Do not provide legal advice.
 - Encourage estimates if the user does not remember exact details.
 - Keep answers short, calm, and supportive.
-- Help determine whether their answer may need more detail
-- Help users understand what the question is asking
+- Help determine whether their answer may need more detail.
+- Help users understand what the question is asking.
+- If the user asks what they answered previously, use the saved answers below.
+- You may summarize or remind the user of earlier answers, but never invent or change them.
 
 Current form question:
 {current_form_question}
@@ -901,6 +905,8 @@ Current form question:
 Current answer already entered:
 {current_answer}
 
+Previous answers entered for this job:
+{json.dumps(job_context, indent=2)}
 
 User's help question:
 {user_question}
