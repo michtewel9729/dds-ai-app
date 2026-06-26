@@ -213,6 +213,10 @@ def init_session_state():
 init_session_state()
 
 
+if "selected_form" not in st.session_state:
+    st.session_state.selected_form = None
+
+
 
 def is_blank(value):
     if value is None:
@@ -1393,6 +1397,28 @@ Job duties answer:
         return {}    
 
 
+def document_selector():
+    st.title("DDS AI App")
+    st.subheader("Choose a form")
+
+    st.info("Select the document you want help completing.")
+
+    form_choice = st.selectbox(
+        "Which form do you need help with?",
+        [
+            "Work History Report (SSA-3369)",
+            "Function Report (SSA-3373) - Coming Soon",
+            "Adult Disability Report (SSA-3368) - Coming Soon",
+        ],
+    )
+
+    if st.button("Start This Form", use_container_width=True):
+        if "Coming Soon" in form_choice:
+            st.warning("This form is not ready yet.")
+            return
+
+        st.session_state.selected_form = "ssa_3369"
+        st.rerun()
 
 
 
@@ -2247,6 +2273,9 @@ if st.sidebar.button("Reset App"):
     st.rerun()
 
 if mode == "Client Guided Mode":
-    client_guided_mode()
+    if st.session_state.selected_form is None:
+        document_selector()
+    elif st.session_state.selected_form == "ssa_3369":
+        client_guided_mode()
 else:
     case_manager_mode()
