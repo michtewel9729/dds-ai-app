@@ -9,6 +9,7 @@ from openai import OpenAI
 import json
 from ai_validation_engine import validate_answer
 import re
+from function_report_questions import FUNCTION_REPORT_QUESTIONS
 
 
 
@@ -139,6 +140,27 @@ def is_acceptable_time_answer(answer):
     return False
 
 
+
+def empty_function_report():
+    return {
+        "function_name": "",
+        "function_ssn": "",
+        "function_phone": "",
+        "living_place": "",
+        "living_with": "",
+        "condition_limits_work": "",
+        "daily_routine": "",
+        "care_for_others": "No",
+        "care_for_others_details": "",
+        "care_for_pets": "No",
+        "care_for_pets_details": "",
+        "help_care_others_animals": "No",
+        "help_care_others_animals_details": "",
+        "before_conditions": "",
+        "sleep_affected": "No",
+        "sleep_affected_details": "",
+    }
+
 def empty_job():
     return {
         "job_title": "",
@@ -203,6 +225,7 @@ def init_session_state():
         "guided_step": 0,
         "guided_job_number": 1,
         "guided_job": empty_job(),
+        "function_report": empty_function_report(),
         "jobs": [],
     }
     for key, value in defaults.items():
@@ -1335,6 +1358,10 @@ Rules:
 - If the answer says "an hour", "per hour", "hourly", "hr", or "/hr", pay_type must be "hour".
 - Convert dates like "5/2022" to "May 2022" if possible.
 - Do not include explanations.
+- Convert dates like "January 3rd 2024" to "January 3, 2024".
+- Convert dates like "February 7th 2026" to "February 7, 2026".
+- Keep the day number if the user gives one.
+- Remove "st", "nd", "rd", or "th" from day numbers.
 
 User answer:
 {answer_text}
@@ -1407,17 +1434,23 @@ def document_selector():
         "Which form do you need help with?",
         [
             "Work History Report (SSA-3369)",
-            "Function Report (SSA-3373) - Coming Soon",
+            "Function Report (SSA-3373)",
             "Adult Disability Report (SSA-3368) - Coming Soon",
         ],
     )
 
     if st.button("Start This Form", use_container_width=True):
-        if "Coming Soon" in form_choice:
+
+        if form_choice == "Work History Report (SSA-3369)":
+            st.session_state.selected_form = "ssa_3369"
+
+        elif form_choice == "Function Report (SSA-3373)":
+            st.session_state.selected_form = "ssa_3373"
+
+        elif "Coming Soon" in form_choice:
             st.warning("This form is not ready yet.")
             return
 
-        st.session_state.selected_form = "ssa_3369"
         st.rerun()
 
 
@@ -1983,7 +2016,60 @@ def normalize_job_for_pdf(job):
                 clean_job["days_per_week"] = number
                 break
 
-    return clean_job           
+    return clean_job 
+
+
+def guided_interview_mode(questions, state_key, title):
+    st.title("DDS AI App")
+    st.subheader(title)
+    st.caption(APP_DISCLAIMER)
+    st.markdown("---")
+
+    if "generic_step" not in st.session_state:
+        st.session_state.generic_step = 0
+
+    total_steps = len(questions)
+    step = st.session_state.generic_step
+
+    if step >= total_steps:
+        st.success("Interview complete.")
+        st.json(st.session_state[state_key])
+
+        if st.button("Start Over", use_container_width=True):
+            st.session_state.generic_step = 0
+            st.session_state[state_key] = {}
+            st.rerun()
+
+        return
+
+    question = questions[step]
+    current_value = st.session_state[state_key].get(question["key"], "")
+    unique_key = f"{state_key}_{step}_{question['key']}"
+
+    render_big_question(question, step, total_steps)
+
+    answer = render_answer_input(question, current_value, unique_key)
+
+    st.session_state[state_key][question["key"]] = answer
+
+    col1, col2, col3 = st.columns([1, 1, 2])
+
+    with col1:
+        if st.button("Back", disabled=step == 0, use_container_width=True):
+            st.session_state.generic_step = max(0, step - 1)
+            st.rerun()
+
+    with col2:
+        next_label = "Finish" if step == total_steps - 1 else "Next"
+
+        if st.button(next_label, use_container_width=True):
+            st.session_state.generic_step += 1
+            st.rerun()
+
+    with col3:
+        st.progress((step + 1) / total_steps)
+
+
 
 def generate_case_pdf(jobs, output_path="work_history_report.pdf"):
     clean_jobs = [normalize_job_for_pdf(job) for job in jobs]
@@ -2264,7 +2350,7 @@ def case_manager_mode():
                 mime="application/pdf",
                 use_container_width=True,
             )
-mode = st.sidebar.radio("Choose App Mode", ["Client Guided Mode", "Case Manager Mode"])
+mode = st.sidebar.radio("Choose App Mode", ["Client Guided Mode", "Function Report" "Case Manager Mode"])
 st.sidebar.markdown("---")
 st.sidebar.caption(APP_DISCLAIMER)
 
@@ -2277,5 +2363,11 @@ if mode == "Client Guided Mode":
         document_selector()
     elif st.session_state.selected_form == "ssa_3369":
         client_guided_mode()
+    elif st.session_state.selected_form == "ssa_3373":
+        guided_interview_mode(
+            FUNCTION_REPORT_QUESTIONS,
+            "function_report",
+            "Client Guided Function Report"
+        )
 else:
     case_manager_mode()
