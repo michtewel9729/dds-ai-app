@@ -1948,6 +1948,28 @@ def client_guided_mode():
             else:
                 st.warning("You can only jump to questions you already reached.")
 
+
+
+def format_date_for_pdf_table(date_text):
+    date_text = str(date_text or "").strip()
+
+    if not date_text:
+        return ""
+
+    if date_text.lower() == "present":
+        return "Present"
+
+    for fmt in ["%B %d, %Y", "%B %Y"]:
+        try:
+            parsed = datetime.strptime(date_text, fmt)
+            return parsed.strftime("%m/%Y")
+        except:
+            pass
+
+    return date_text
+
+
+
 def normalize_job_for_pdf(job):
     clean_job = repair_job(job).copy()
 
@@ -2015,7 +2037,10 @@ def normalize_job_for_pdf(job):
             if word in days_text:
                 clean_job["days_per_week"] = number
                 break
-
+        
+    clean_job["dates_from"] = format_date_for_pdf_table(clean_job.get("dates_from", ""))
+    clean_job["dates_to"] = format_date_for_pdf_table(clean_job.get("dates_to", ""))
+    
     return clean_job 
 
 
