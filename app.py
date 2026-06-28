@@ -1339,13 +1339,15 @@ def run_ai_json_extraction(prompt, default_result=None):
             model="gpt-4.1-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
+            response_format={"type": "json_object"},
         )
 
         content = response.choices[0].message.content.strip()
         return json.loads(content)
 
     except Exception as e:
-        print("AI extraction failed:", e)
+        st.warning("AI extraction failed.")
+        st.write(str(e))
         return default_result
 
 
