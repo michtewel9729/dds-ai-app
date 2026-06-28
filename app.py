@@ -1330,6 +1330,27 @@ def needs_time_unit(question, answer):
 
     return not is_acceptable_time_answer(answer)
 
+def run_ai_json_extraction(prompt, default_result=None):
+    if default_result is None:
+        default_result = {}
+
+    try:
+        response = openai_client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+        )
+
+        content = response.choices[0].message.content.strip()
+        return json.loads(content)
+
+    except Exception as e:
+        print("AI extraction failed:", e)
+        return default_result
+
+
+
+
 
 def extract_inline_job_details(answer_text):
     if openai_client is None:
@@ -1367,20 +1388,17 @@ User answer:
 {answer_text}
 """
 
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            response_format={"type": "json_object"},
-        )
-
-        return json.loads(response.choices[0].message.content)
-
-    except Exception as e:
-        st.warning("Inline extraction failed.")
-        st.write(str(e))
-        return {}
+    return run_ai_json_extraction(
+        prompt,
+        default_result={
+            "job_title": "",
+            "employer": "",
+            "dates_from": "",
+            "dates_to": "",
+            "pay_rate": "",
+            "pay_type": "",
+        },
+    )
     
 
 def extract_details_from_job_duties(answer_text):
