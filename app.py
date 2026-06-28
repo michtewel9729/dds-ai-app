@@ -1732,25 +1732,25 @@ def client_guided_mode():
                         st.warning("No transcript was created. Please try again.")
                         st.write("Debug: transcript value was:", transcript)
 
-        with st.expander("💬 Need help with this question?"):
-            help_question = st.text_input(
-                "Ask a question about this form question",
-                key=f"help_question_{unique_key}",
-                placeholder="Example: What does this question mean?",
-            )
-
-            if st.button("Ask Assistant", key=f"ask_help_{unique_key}"):
-                if help_question.strip():
-                    assistant_response = ask_help_assistant(
-                        help_question,
-                        question.get("question", ""),
-                        get_guided_value(question)
-                    )
-                    st.info(assistant_response)
-                else:
-                    st.warning("Type a question first.")         
 
 
+    with st.expander("💬 Need help with this question?"):
+        help_question = st.text_input(
+            "Ask a question about this form question",
+            key=f"help_question_{unique_key}",
+            placeholder="Example: What does this question mean?",
+        )
+
+        if st.button("Ask Assistant", key=f"ask_help_{unique_key}"):
+            if help_question.strip():
+                assistant_response = ask_help_assistant(
+                    help_question,
+                    question.get("question", ""),
+                    answer_for_storage
+                )
+                st.info(assistant_response)
+            else:
+                st.warning("Type a question first.")                   
 
 
     col1, col2, col3 = st.columns([1, 1, 2])
@@ -2040,7 +2040,7 @@ def normalize_job_for_pdf(job):
         
     clean_job["dates_from"] = format_date_for_pdf_table(clean_job.get("dates_from", ""))
     clean_job["dates_to"] = format_date_for_pdf_table(clean_job.get("dates_to", ""))
-    
+
     return clean_job 
 
 
@@ -2050,18 +2050,42 @@ def guided_interview_mode(questions, state_key, title):
     st.caption(APP_DISCLAIMER)
     st.markdown("---")
 
-    if "generic_step" not in st.session_state:
-        st.session_state.generic_step = 0
+    step_key = f"{state_key}_step"
+
+    if step_key not in st.session_state:
+        st.session_state[step_key] = 0
+
+    if state_key not in st.session_state:
+        st.session_state[state_key] = {}
+
+    def should_show_question(q):
+        depends_on = q.get("depends_on")
+        if not depends_on:
+            return True
+
+        parent_key = depends_on.get("key")
+        required_value = depends_on.get("value")
+
+        return st.session_state[state_key].get(parent_key) == required_value
+
+    def next_visible_step(start):
+        while start < len(questions):
+            if should_show_question(questions[start]):
+                return start
+            start += 1
+        return len(questions)
+
+    st.session_state[step_key] = next_visible_step(st.session_state[step_key])
 
     total_steps = len(questions)
-    step = st.session_state.generic_step
+    step = st.session_state[step_key]
 
     if step >= total_steps:
         st.success("Interview complete.")
         st.json(st.session_state[state_key])
 
         if st.button("Start Over", use_container_width=True):
-            st.session_state.generic_step = 0
+            st.session_state[step_key] = 0
             st.session_state[state_key] = {}
             st.rerun()
 
@@ -2073,26 +2097,193 @@ def guided_interview_mode(questions, state_key, title):
 
     render_big_question(question, step, total_steps)
 
+    questions_left = total_steps - (step + 1)
+    percent_done = int(((step + 1) / total_steps) * 100)
+
+    st.caption(
+        f"You're making great progress. About {percent_done}% complete "
+        f"({questions_left} questions remaining)."
+    )
+
+    speech_text = question["question"] + ". " + question.get("helper", "")
+
+    if st.button("🔊 Read Question Aloud", key=f"read_{unique_key}"):
+        audio_path = create_question_audio(
+            speech_text,
+            filename=f"question_audio_{state_key}_{step}_{question['key']}.mp3"
+        )
+
+        if audio_path:
+            with open(audio_path, "rb") as audio_file:
+                st.audio(audio_file.read(), format="audio/mp3")
+        else:
+            st.warning("Audio could not be created. Please check your OpenAI API key.")
+
+    voice_text_key = f"{unique_key}_voice_text"
+    pending_voice_key = f"{unique_key}_pending_voice"
+
+    if st.session_state.get(pending_voice_key):
+        current_value = st.session_state[pending_voice_key]
+        st.session_state[unique_key] = current_value
+        del st.session_state[pending_voice_key]
+
     answer = render_answer_input(question, current_value, unique_key)
 
-    st.session_state[state_key][question["key"]] = answer
+    saved_voice_answer = st.session_state.get(voice_text_key, "")
+
+    if saved_voice_answer and str(answer).strip() and str(answer).strip() != str(saved_voice_answer).strip():
+        st.session_state[voice_text_key] = ""
+        saved_voice_answer = ""
+
+    if saved_voice_answer:
+        st.info(f"Using voice answer: {saved_voice_answer}")
+
+        if st.button("Use typed answer instead", key=f"use_typed_{unique_key}"):
+            st.session_state[voice_text_key] = ""
+            st.session_state[state_key][question["key"]] = answer
+            st.rerun()
+
+        answer_for_storage = saved_voice_answer
+    else:
+        answer_for_storage = answer
+
+    st.session_state[state_key][question["key"]] = answer_for_storage
+
+    if question["type"] in ["text", "textarea"]:
+        with st.expander("🎤 Prefer to speak your answer?"):
+            audio_answer = st.audio_input(
+                "Record your answer",
+                key=f"voice_{unique_key}",
+            )
+
+            if audio_answer is not None:
+                if st.button("Use Voice Answer", key=f"use_voice_{unique_key}"):
+
+                    try:
+                        transcript = transcribe_audio(audio_answer)
+                    except Exception as e:
+                        st.error("Voice transcription failed.")
+                        st.write(str(e))
+                        transcript = ""
+
+                    if transcript:
+                        st.session_state[voice_text_key] = transcript
+                        st.session_state[pending_voice_key] = transcript
+                        st.session_state[state_key][question["key"]] = transcript
+
+                        st.success("Voice answer added. Click Next to continue.")
+                        st.info(transcript)
+                        st.rerun()
+                    else:
+                        st.warning("No transcript was created. Please try again.") 
+
+    with st.expander("💬 Need help with this question?"):
+        help_question = st.text_input(
+            "Ask the assistant",
+            key=f"help_question_{unique_key}"
+        )
+
+        if st.button("Ask Assistant", key=f"ask_help_{unique_key}"):
+            if help_question.strip():
+                assistant_response = ask_help_assistant(
+                    help_question,
+                    question.get("question", ""),
+                    answer_for_storage
+                )
+                st.info(assistant_response)
+            else:
+                st.warning("Type a question first.")
 
     col1, col2, col3 = st.columns([1, 1, 2])
 
     with col1:
         if st.button("Back", disabled=step == 0, use_container_width=True):
-            st.session_state.generic_step = max(0, step - 1)
+            st.session_state[step_key] = max(0, step - 1)
             st.rerun()
 
     with col2:
         next_label = "Finish" if step == total_steps - 1 else "Next"
 
         if st.button(next_label, use_container_width=True):
-            st.session_state.generic_step += 1
+
+            answer_to_check = st.session_state[state_key].get(
+                question["key"], ""
+            )
+
+            if question.get("check_type"):
+
+                answer_to_validate = str(answer_to_check).strip()
+
+                none_like_answers = [
+                    "none",
+                    "no",
+                    "n/a",
+                    "na",
+                    "not applicable",
+                ]
+
+                if answer_to_validate.lower() in none_like_answers:
+                    pass
+
+                elif answer_to_validate:
+
+                    validation_text = validate_answer(
+                        answer_to_validate,
+                        question["check_type"],
+                    )
+
+                    try:
+                        validation = json.loads(validation_text)
+
+                        status = validation.get("status", "")
+                        follow_up = validation.get("follow_up_question", "")
+
+                        if status == "Needs Follow-Up":
+                            st.warning(
+                                "⚠️ Please add more detail before moving forward.\n\n"
+                                + (
+                                    follow_up
+                                    or "This answer needs a little more detail."
+                                )
+                            )
+                            st.stop()
+
+                        elif status == "Usable but Light":
+                            st.info(f"Optional improvement: {follow_up}")
+
+                    except Exception:
+                        st.warning(
+                            "AI review could not read the response, but you can continue."
+                        )
+          
+
+            st.session_state[step_key] = next_visible_step(step + 1)
             st.rerun()
 
     with col3:
         st.progress((step + 1) / total_steps)
+
+        visible_steps = [
+            (i, q)
+            for i, q in enumerate(questions)
+            if should_show_question(q) and i <= step
+        ]
+
+        jump_options = [
+            f"{i + 1}. {q['question']}"
+            for i, q in visible_steps
+        ]
+
+        selected_jump = st.selectbox(
+            "Review an earlier question",
+            ["Stay here"] + jump_options,
+            key=f"jump_question_{state_key}_{step}"
+        )
+
+        if selected_jump != "Stay here":
+            selected_index = int(selected_jump.split(".")[0]) - 1
+            st.session_state[step_key] = selected_index
+            st.rerun()
 
 
 
