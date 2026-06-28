@@ -1428,20 +1428,14 @@ Job duties answer:
 {answer_text}
 """
 
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            response_format={"type": "json_object"},
-        )
-
-        return json.loads(response.choices[0].message.content)
-
-    except Exception as e:
-        st.warning("Duties extraction failed.")
-        st.write(str(e))
-        return {}    
+    return run_ai_json_extraction(
+        prompt,
+        default_result={
+            "equipment": "",
+            "exposure_description": "",
+            "medical_conditions": "",
+        },
+    ) 
 
 
 def document_selector():
