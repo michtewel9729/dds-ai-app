@@ -1491,6 +1491,12 @@ def answer_changed_since_extraction(answer_key, current_answer):
 
     return str(previous_answer).strip() != str(current_answer).strip()
 
+def answer_changed_since_validation(question_key, current_answer):
+    previous_key = f"{question_key}_last_validated_answer"
+    previous_answer = st.session_state.get(previous_key, "")
+
+    return str(previous_answer).strip() != str(current_answer).strip()
+
 
 def client_guided_mode():
     st.title("DDS AI App")
@@ -1876,7 +1882,6 @@ def client_guided_mode():
                 )
                 st.stop()
 
-
             if question.get("check_type"):
                 answer_to_validate = str(get_guided_value(question)).strip()
 
@@ -1886,6 +1891,12 @@ def client_guided_mode():
                     pass
 
                 elif answer_to_validate:
+
+                    validation_warning_key = f"{unique_key}_validation_warning_shown"
+
+                    if answer_changed_since_validation(question["key"], answer_to_validate):
+                        st.session_state[validation_warning_key] = False
+
                     validation_text = validate_answer(
                         answer_to_validate,
                         question["check_type"]
@@ -1897,8 +1908,9 @@ def client_guided_mode():
                         status = validation.get("status", "")
                         follow_up = validation.get("follow_up_question", "")
 
+                        st.session_state[f"{question['key']}_last_validated_answer"] = answer_to_validate
+
                         if status == "Needs Follow-Up":
-                            validation_warning_key = f"{unique_key}_validation_warning_shown"
 
                             if not st.session_state.get(validation_warning_key):
                                 st.session_state[validation_warning_key] = True
@@ -2276,7 +2288,7 @@ def guided_interview_mode(questions, state_key, title):
 
                     validation_warning_key = f"{unique_key}_validation_warning_shown"
 
-                    if answer_changed_since_extraction(question["key"], answer_to_validate):
+                    if answer_changed_since_validation(question["key"], answer_to_validate):
                         st.session_state[validation_warning_key] = False
 
                     validation_text = validate_answer(
@@ -2289,16 +2301,23 @@ def guided_interview_mode(questions, state_key, title):
 
                         status = validation.get("status", "")
                         follow_up = validation.get("follow_up_question", "")
+                        st.session_state[f"{question['key']}_last_validated_answer"] = answer_to_validate
 
                         if status == "Needs Follow-Up":
-                            st.warning(
-                                "⚠️ Please add more detail before moving forward.\n\n"
-                                + (
-                                    follow_up
-                                    or "This answer needs a little more detail."
+
+                            if not st.session_state.get(validation_warning_key):
+                                st.session_state[validation_warning_key] = True
+
+                                st.warning(
+                                    "⚠️ Please add more detail before moving forward.\n\n"
+                                    + (
+                                        follow_up
+                                        or "This answer needs a little more detail."
+                                    )
                                 )
-                            )
-                            st.stop()
+
+                                st.info("You can revise your answer, or click Next again to continue.")
+                                st.stop()
 
                         elif status == "Usable but Light":
                             st.info(f"Optional improvement: {follow_up}")
