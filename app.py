@@ -309,6 +309,7 @@ def reset_everything():
     st.session_state.jobs = []
 
 
+
 GUIDED_QUESTIONS = [
     {"key": "job_title", "target": "job", "icon": "💼", "question": "What was your job title?", "helper": "Example: Warehouse Worker, Cashier, Home Health Aide, Cook, Cleaner.", "type": "text"},
     {"key": "employer", "target": "job", "icon": "🏢", "question": "Who did you work for?", "helper": "Enter the company or employer name. If you do not remember, write your best estimate.", "type": "text"},
@@ -448,6 +449,30 @@ def parse_work_date(date_str):
 
 
 
+def show_validation_warning(validation, follow_up):
+    mentioned = validation.get("mentioned_details", [])
+    missing = validation.get("missing_details", [])
+    better_example = validation.get("better_example", "")
+
+    st.warning("⚠️ Please add a little more detail before moving forward.")
+
+    if mentioned:
+        st.write("**You already mentioned:**")
+        for item in mentioned:
+            st.write(f"• {item}")
+
+    if missing:
+        st.write("**Try adding:**")
+        for item in missing:
+            st.write(f"• {item}")
+
+    if better_example:
+        st.info(f"Example: {better_example}")
+
+    if follow_up:
+        st.write(f"**Helpful question:** {follow_up}")
+
+    st.info("You can revise your answer, or click Next again to continue.")
 
 
 
@@ -1660,7 +1685,7 @@ def client_guided_mode():
             ]
 
             selected_edit = st.selectbox(
-                "Choose an answer to edit",
+                "Need to edit a different answer?",
                 edit_options,
                 key="edit_question_select"
             )
@@ -2038,12 +2063,7 @@ def client_guided_mode():
                             if not st.session_state.get(validation_warning_key):
                                 st.session_state[validation_warning_key] = True
 
-                                st.warning(
-                                    "⚠️ Please add more detail before moving forward.\n\n"
-                                    + (follow_up or "This answer needs a little more detail.")
-                                )
-
-                                st.info("You can revise your answer, or click Next again to continue.")
+                                show_validation_warning(validation, follow_up)
                                 st.stop()
 
                         elif status == "Usable but Light":
