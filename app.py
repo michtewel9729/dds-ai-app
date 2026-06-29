@@ -2020,60 +2020,8 @@ def client_guided_mode():
                     st.session_state.duties_extracted_details = useful_extracted
                     st.rerun()        
 
-
-
-
-            if needs_time_unit(question, answer_to_check):
-                st.warning(
-                    "Please include a time type, such as hours or minutes. "
-                    "Example: 6 hours, 30 minutes, none, or unknown."
-                )
+            if not run_validation_for_question(question, answer_to_check, unique_key):
                 st.stop()
-
-            if question.get("check_type"):
-                answer_to_validate = str(get_guided_value(question)).strip()
-
-                none_like_answers = ["none", "no", "n/a", "na", "not applicable"]
-
-                if question["key"] == "equipment" and answer_to_validate.lower() in none_like_answers:
-                    pass
-
-                elif answer_to_validate:
-
-                    validation_warning_key = f"{unique_key}_validation_warning_shown"
-
-                    if answer_changed_since_validation(question["key"], answer_to_validate):
-                        st.session_state[validation_warning_key] = False
-
-                    validation_text = validate_answer(
-                        answer_to_validate,
-                        question["check_type"]
-                    )
-
-                    try:
-                        validation = json.loads(validation_text)
-
-                        status = validation.get("status", "")
-                        follow_up = validation.get("follow_up_question", "")
-
-                        st.session_state[f"{question['key']}_last_validated_answer"] = answer_to_validate
-
-                        if status == "Needs Follow-Up":
-
-                            if not st.session_state.get(validation_warning_key):
-                                st.session_state[validation_warning_key] = True
-
-                                show_validation_warning(validation, follow_up)
-                                st.stop()
-
-                        elif status == "Usable but Light":
-                            st.info(f"Optional improvement: {follow_up}")
-
-                    except Exception:
-                        st.warning(
-                            "AI review could not read the response, "
-                            "but you can continue."
-                        )
 
             if st.session_state.get("editing_from_review"):
                 next_step = next_guided_step(step + 1)
@@ -2169,6 +2117,59 @@ def format_date_for_pdf_table(date_text):
             pass
 
     return date_text
+
+def run_validation_for_question(question, answer, unique_key):
+    if not question.get("check_type"):
+        return True
+
+    answer_to_validate = str(answer or "").strip()
+
+    if needs_time_unit(question, answer_to_validate):
+        st.warning(
+            "Please include a time type, such as hours or minutes. "
+            "Example: 6 hours, 30 minutes, none, or unknown."
+        )
+        return False
+
+    none_like_answers = ["none", "no", "n/a", "na", "not applicable"]
+
+    if answer_to_validate.lower() in none_like_answers:
+        return True
+
+    if not answer_to_validate:
+        return True
+
+    validation_warning_key = f"{unique_key}_validation_warning_shown"
+
+    if answer_changed_since_validation(question["key"], answer_to_validate):
+        st.session_state[validation_warning_key] = False
+
+    validation_text = validate_answer(
+        answer_to_validate,
+        question["check_type"]
+    )
+
+    try:
+        validation = json.loads(validation_text)
+
+        status = validation.get("status", "")
+        follow_up = validation.get("follow_up_question", "")
+
+        st.session_state[f"{question['key']}_last_validated_answer"] = answer_to_validate
+
+        if status == "Needs Follow-Up":
+            if not st.session_state.get(validation_warning_key):
+                st.session_state[validation_warning_key] = True
+                show_validation_warning(validation, follow_up)
+                return False
+
+        elif status == "Usable but Light":
+            st.info(f"Optional improvement: {follow_up}")
+
+    except Exception:
+        st.warning("AI review could not read the response, but you can continue.")
+
+    return True
 
 
 
