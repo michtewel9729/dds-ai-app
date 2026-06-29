@@ -315,6 +315,7 @@ GUIDED_QUESTIONS = [
     {"key": "dates_from", "target": "job", "icon": "📅", "question": "When did you start this job?", "helper": "Choose the closest start date you remember. An estimate is okay.", "type": "date"},
     {"key": "dates_to", "target": "job", "icon": "📅", "question": "When did this job end?", "helper": "Choose the closest end date. If you still work there, choose Present under Year.", "type": "date"},
     {"key": "pay_rate", "target": "job", "icon": "💰", "question": "How much were you paid?", "helper": "Example: $18 per hour, $2,800 per month, salary, commission, or unknown.", "type": "text"},
+    {"key": "pay_type", "target": "job", "icon": "💵", "question": "Was that pay by hour, day, week, month, or year?", "helper": "If the previous question already selected the correct option, you can simply click Next.", "type": "radio", "options": ["hour", "day", "week", "month", "year"]},
     {"key": "hours_per_day", "target": "job", "icon": "⏰", "question": "How many hours did you usually work per day?", "helper": "Enter the average number of hours you worked each day (0–24).", "type": "number", "min": 0, "max": 24},
     {"key": "days_per_week", "target": "job", "icon": "🗓️", "question": "How many days did you usually work per week?", "helper": "Enter the average number of days you worked each week (0–7).", "type": "number", "min": 0, "max": 7},
     {"key": "job_duties", "target": "job", "icon": "📝", "question": "What did you do during a typical workday?", "helper": "Describe the main tasks you did.", "type": "textarea", "check_type": "job_duties"},
@@ -1830,7 +1831,7 @@ def client_guided_mode():
                 question["key"] == "job_title"
                 and (
                     not st.session_state.get(extraction_done_key)
-                    or answer_changed_since_extraction("job_title", answer_to_check)
+                    or answer_changed_since_extraction(question["key"], answer_to_check)
                 )
             ):
                 extracted = extract_inline_job_details(str(answer_to_check))
@@ -1857,8 +1858,10 @@ def client_guided_mode():
 
             if (
                 question["key"] == "job_duties"
-                and not st.session_state.get(duties_done_key)
-                and not st.session_state.get("duties_extraction_completed_for_job")
+                and (
+                    not st.session_state.get(duties_done_key)
+                    or answer_changed_since_extraction(question["key"], answer_to_check)
+                )
             ):
                 extracted = extract_details_from_job_duties(str(answer_to_check))
 
@@ -1868,7 +1871,7 @@ def client_guided_mode():
                 }
 
                 if useful_extracted:
-                    st.session_state["job_title_last_extracted_answer"] = answer_to_check
+                    st.session_state["job_duties_last_extracted_answer"] = answer_to_check
                     st.session_state.duties_extracted_details = useful_extracted
                     st.rerun()        
 
