@@ -315,9 +315,8 @@ GUIDED_QUESTIONS = [
     {"key": "dates_from", "target": "job", "icon": "📅", "question": "When did you start this job?", "helper": "Choose the closest start date you remember. An estimate is okay.", "type": "date"},
     {"key": "dates_to", "target": "job", "icon": "📅", "question": "When did this job end?", "helper": "Choose the closest end date. If you still work there, choose Present under Year.", "type": "date"},
     {"key": "pay_rate", "target": "job", "icon": "💰", "question": "How much were you paid?", "helper": "Example: $18 per hour, $2,800 per month, salary, commission, or unknown.", "type": "text"},
-    {"key": "pay_type", "target": "job", "icon": "💵", "question": "Was that pay by hour, day, week, month, or year?", "helper": "Choose the closest option.", "type": "select", "options": ["hour", "day", "week", "month", "year"]},
-    {"key": "hours_per_day", "target": "job", "icon": "⏰", "question": "How many hours did you usually work per day?", "helper": "Example: 8 hours, 4 hours, varied, or unknown.", "type": "text"},
-    {"key": "days_per_week", "target": "job", "icon": "🗓️", "question": "How many days did you usually work per week?", "helper": "Example: 5 days, 3 days, varied, or unknown.", "type": "text"},
+    {"key": "hours_per_day", "target": "job", "icon": "⏰", "question": "How many hours did you usually work per day?", "helper": "Enter the average number of hours you worked each day (0–24).", "type": "number", "min": 0, "max": 24},
+    {"key": "days_per_week", "target": "job", "icon": "🗓️", "question": "How many days did you usually work per week?", "helper": "Enter the average number of days you worked each week (0–7).", "type": "number", "min": 0, "max": 7},
     {"key": "job_duties", "target": "job", "icon": "📝", "question": "What did you do during a typical workday?", "helper": "Describe the main tasks you did.", "type": "textarea", "check_type": "job_duties"},
     {"key": "reports", "target": "job", "icon": "📄", "question": "Did this job involve writing, reports, forms, or computer work?", "helper": "Write No if it did not. If yes, describe what you completed and about how often.", "type": "textarea", "check_type": "reports"},
     {"key": "supervise", "target": "job", "icon": "👥", "question": "Did you supervise other people?", "helper": "Write No if not. If yes, describe who/how many and what you did.", "type": "textarea"},
@@ -749,6 +748,24 @@ def render_answer_input(question, current_value, unique_key):
             "Your answer",
             options,
             default=default,
+            key=unique_key,
+            label_visibility="collapsed",
+        )
+
+
+    if q_type == "number":
+
+        try:
+            default_value = int(current_value)
+        except (TypeError, ValueError):
+            default_value = question.get("min", 0)
+
+        return st.number_input(
+            "Your answer",
+            min_value=question.get("min", 0),
+            max_value=question.get("max", 100),
+            value=default_value,
+            step=1,
             key=unique_key,
             label_visibility="collapsed",
         )
@@ -1467,7 +1484,12 @@ def document_selector():
 
         st.rerun()
 
+def answer_changed_since_extraction(answer_key, current_answer):
+    previous_key = f"{answer_key}_last_extracted_answer"
 
+    previous_answer = st.session_state.get(previous_key, "")
+
+    return str(previous_answer).strip() != str(current_answer).strip()
 
 
 def client_guided_mode():
@@ -1800,8 +1822,10 @@ def client_guided_mode():
 
             if (
                 question["key"] == "job_title"
-                and not st.session_state.get(extraction_done_key)
-                and not st.session_state.get("inline_extraction_completed_for_job")
+                and (
+                    not st.session_state.get(extraction_done_key)
+                    or answer_changed_since_extraction("job_title", answer_to_check)
+                )
             ):
                 extracted = extract_inline_job_details(str(answer_to_check))
 
@@ -1819,6 +1843,7 @@ def client_guided_mode():
                 ]
 
                 if any(useful_extracted.get(key) for key in meaningful_extractions):
+                    st.session_state["job_title_last_extracted_answer"] = answer_to_check
                     st.session_state.inline_extracted_details = useful_extracted
                     st.rerun()
 
@@ -1837,6 +1862,7 @@ def client_guided_mode():
                 }
 
                 if useful_extracted:
+                    st.session_state["job_title_last_extracted_answer"] = answer_to_check
                     st.session_state.duties_extracted_details = useful_extracted
                     st.rerun()        
 
@@ -1872,11 +1898,18 @@ def client_guided_mode():
                         follow_up = validation.get("follow_up_question", "")
 
                         if status == "Needs Follow-Up":
-                            st.warning(
-                                "⚠️ Please add more detail before moving forward.\n\n"
-                                + (follow_up or "This answer needs a little more detail.")
-                            )
-                            st.stop()
+                            validation_warning_key = f"{unique_key}_validation_warning_shown"
+
+                            if not st.session_state.get(validation_warning_key):
+                                st.session_state[validation_warning_key] = True
+
+                                st.warning(
+                                    "⚠️ Please add more detail before moving forward.\n\n"
+                                    + (follow_up or "This answer needs a little more detail.")
+                                )
+
+                                st.info("You can revise your answer, or click Next again to continue.")
+                                st.stop()
 
                         elif status == "Usable but Light":
                             st.info(f"Optional improvement: {follow_up}")
@@ -2241,9 +2274,14 @@ def guided_interview_mode(questions, state_key, title):
 
                 elif answer_to_validate:
 
+                    validation_warning_key = f"{unique_key}_validation_warning_shown"
+
+                    if answer_changed_since_extraction(question["key"], answer_to_validate):
+                        st.session_state[validation_warning_key] = False
+
                     validation_text = validate_answer(
                         answer_to_validate,
-                        question["check_type"],
+                        question["check_type"]
                     )
 
                     try:
