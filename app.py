@@ -999,60 +999,156 @@ def create_question_audio(text, filename="question_audio.mp3"):
 
     return filename
 
+def answer_status(value):
+    if is_blank(value):
+        return "⚠️"
+    return "✅"
+
+
+def review_row(label, value):
+    display_value = value if not is_blank(value) else "Not answered"
+    st.write(f"{answer_status(value)} **{label}:** {display_value}")
+
+
+def review_section(title):
+    st.markdown("---")
+    st.markdown(f"### {title}")
+
 def show_client_job_review(job, job_number):
     job = repair_job(job)
     physical = job["physical_activities"]
     warnings = check_job_warnings(job, job_number)
 
     st.markdown(f"## Review Job {job_number}")
-    st.info("Please review your summary before saving this job.")
+    st.info("Please review your answers before saving this job.")
 
-    st.markdown("### 📋 Job Summary")
+    review_section("📋 Job Summary")
 
-    st.write(f"**Job:** {job.get('job_title') or 'Not answered'} at {job.get('employer') or 'Not answered'}")
-    st.write(f"**Dates:** {job.get('dates_from') or 'Not answered'} to {job.get('dates_to') or 'Not answered'}")
-    st.write(f"**Schedule:** {job.get('hours_per_day') or 'Not answered'} hours/day, {job.get('days_per_week') or 'Not answered'} days/week")
-    st.write(f"**People interaction:** {job.get('interacted_with_people') or 'Not answered'}")
+    if st.button("✏️ Edit Job Summary", key=f"edit_summary_{job_number}"):
+        st.session_state.editing_from_review = True
+        st.session_state.guided_step = find_question_step("job_title")
+        st.rerun()
 
+    review_row("Job title", job.get("job_title"))
+    review_row("Employer", job.get("employer"))
+    review_row("Dates", f"{job.get('dates_from') or 'Not answered'} to {job.get('dates_to') or 'Not answered'}")
+    review_row("Pay", f"{job.get('pay_rate') or 'Not answered'} per {job.get('pay_type') or 'Not answered'}")
+    review_row("Hours per day", job.get("hours_per_day"))
+    review_row("Days per week", job.get("days_per_week"))
+
+    review_section("📝 Work Duties")
+
+    if st.button("✏️ Edit Work Duties", key=f"edit_duties_{job_number}"):
+        st.session_state.editing_from_review = True
+        st.session_state.guided_step = find_question_step("job_duties")
+        st.rerun()
+
+    review_row("Typical workday", job.get("job_duties"))
+    review_row("Reports / forms / computer work", job.get("reports"))
+    review_row("Supervision", job.get("supervise"))
+    review_row("Tools / equipment", job.get("equipment"))
+
+    review_section("👥 People Interaction")
+    review_row("Interacted with people", job.get("interacted_with_people"))
+    if job.get("interacted_with_people") == "Yes":
+        review_row("Interaction details", job.get("interaction_details"))
+
+    review_section("🏃 Physical Activities")
+
+    if st.button("✏️ Edit Physical Activities", key=f"edit_physical_{job_number}"):
+        st.session_state.editing_from_review = True
+        st.session_state.guided_step = find_question_step("standing_walking")
+        st.rerun()    
+
+    review_row("Standing / walking", physical.get("standing_walking"))
+    review_row("Sitting", physical.get("sitting"))
+    review_row("Stooping / bending", physical.get("stooping"))
+    review_row("Kneeling", physical.get("kneeling"))
+    review_row("Crouching", physical.get("crouching"))
+    review_row("Crawling", physical.get("crawling"))
+    review_row("Finger use", physical.get("fingers_time"))
+    review_row("Finger hand usage", physical.get("fingers_hand_usage"))
+    review_row("Grasping / holding", physical.get("grasping_time"))
+    review_row("Grasping hand usage", physical.get("grasping_hand_usage"))
+    review_row("Reaching at/below shoulder", physical.get("reaching_below_time"))
+    review_row("Reaching below arm usage", physical.get("reaching_below_arm_usage"))
+    review_row("Reaching overhead", physical.get("reaching_overhead_time"))
+    review_row("Reaching overhead arm usage", physical.get("reaching_overhead_arm_usage"))
+    review_row("Stairs / ramps", physical.get("stairs"))
+    review_row("Ladders / scaffolds", physical.get("ladders"))
+
+    
+
+    review_section("📦 Lifting / Carrying")
     heaviest = job.get("other_lift_text") if job.get("heaviest_lift") == "other" else job.get("heaviest_lift")
     frequent = job.get("other_frequent_lift_text") if job.get("frequent_lift") == "other" else job.get("frequent_lift")
-    st.write(f"**Lifting:** Heaviest: {heaviest or 'Not answered'} | Frequent: {frequent or 'Not answered'}")
 
-    if job.get("job_duties"):
-        st.write("**Main duties:**")
-        st.info(job.get("job_duties"))
+    if st.button("✏️ Edit Lifting", key=f"edit_lifting_{job_number}"):
+        st.session_state.editing_from_review = True
+        st.session_state.guided_step = find_question_step("lifting_description")
+        st.rerun()
+
+    review_row("Lifting description", job.get("lifting_description"))
+    review_row("Heaviest lift", heaviest)
+    review_row("Frequent lift", frequent)
+
+    review_section("🌡 Work Environment")
+    selected_exposures = [
+        name.replace("_", " ").title()
+        for name, checked in job.get("exposures", {}).items()
+        if checked
+    ]
+
+    if st.button("✏️ Edit Work Environment", key=f"edit_environment_{job_number}"):
+        st.session_state.editing_from_review = True
+        st.session_state.guided_step = find_question_step("exposure_checkboxes")
+        st.rerun()
+
+    review_row("Selected workplace conditions", ", ".join(selected_exposures) if selected_exposures else "None selected")
+    review_row("Exposure description", job.get("exposure_description"))
+
+    review_section("🩺 Medical Conditions")
+    review_row("Medical impact", job.get("medical_conditions"))
+
+    if st.button("✏️ Edit Medical Conditions", key=f"edit_medical_{job_number}"):
+        st.session_state.editing_from_review = True
+        st.session_state.guided_step = find_question_step("medical_conditions")
+        st.rerun()
+
+    review_section("📌 Extra Notes")
+    review_row("Other important details", job.get("extra_notes"))
+
+    review_section("⚠️ Review Items")
 
     if warnings:
         st.warning(f"{len(warnings)} review item(s) may need another look.")
 
         with st.expander("View Review Items", expanded=False):
             st.info("These are reminders to review. They do not mean the answers are wrong.")
-            for warning in warnings:
+
+            for i, warning in enumerate(warnings, start=1):
                 clean_warning = warning.replace(f"Job {job_number}: ", "")
-                st.write(f"• {clean_warning}")
+
+                target_key = get_warning_target_key(clean_warning)
+                target_step = find_question_step(target_key)
+                question_number = target_step + 1
+
+                col1, col2 = st.columns([5, 1])
+
+                with col1:
+                    st.write(f"**Q{question_number}:** {clean_warning}")
+
+                with col2:
+                    if st.button(
+                        "Review",
+                        key=f"review_warning_{job_number}_{i}"
+                    ):
+                        st.session_state.editing_from_review = True
+                        st.session_state.guided_step = target_step
+                        st.rerun()
+
     else:
         st.success("No major missing items detected. Please review before saving.")
-
-    with st.expander("View Full Details", expanded=False):
-        st.markdown("### Work Duties")
-        st.info(job.get("job_duties") or "Not answered")
-
-        st.markdown("### Physical Activity")
-        st.write("**Standing/Walking:**", physical.get("standing_walking") or "Not answered")
-        st.write("**Sitting:**", physical.get("sitting") or "Not answered")
-        st.write("**Stooping/Bending:**", physical.get("stooping") or "Not answered")
-        st.write("**Kneeling:**", physical.get("kneeling") or "Not answered")
-        st.write("**Crouching:**", physical.get("crouching") or "Not answered")
-        st.write("**Crawling:**", physical.get("crawling") or "Not answered")
-
-        st.markdown("### Lifting / Carrying")
-        st.info(job.get("lifting_description") or "Not answered")
-
-        st.markdown("### Environmental Exposures")
-        st.info(job.get("exposure_description") or "Not answered")
-
-        st.markdown("### Medical Conditions")
-        st.info(job.get("medical_conditions") or "Not answered")
 
 
 
@@ -1232,6 +1328,30 @@ def find_question_step(question_key):
         if q.get("key") == question_key:
             return i
     return 0
+
+def get_warning_target_key(warning):
+    warning = warning.lower()
+
+    if "finger/hand use" in warning:
+        return "fingers_time"
+    if "grasping/holding" in warning:
+        return "grasping_time"
+    if "reaching at/below" in warning:
+        return "reaching_below_time"
+    if "standing" in warning:
+        return "standing_walking"
+    if "sitting" in warning:
+        return "sitting"
+    if "lifting" in warning:
+        return "lifting_description"
+    if "equipment" in warning:
+        return "equipment"
+    if "exposure" in warning:
+        return "exposure_description"
+    if "medical" in warning:
+        return "medical_conditions"
+
+    return "job_title"
 
 def show_job_memory_summary():
     job = repair_job(st.session_state.guided_job)
