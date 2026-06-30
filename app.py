@@ -1040,6 +1040,10 @@ def create_question_audio(text, filename="question_audio.mp3"):
 def answer_status(value):
     if is_blank(value):
         return "⚠️"
+
+    if str(value).strip() in ["0", "0.0"]:
+        return "⚠️"
+
     return "✅"
 
 def normalize_answer(question, answer):
