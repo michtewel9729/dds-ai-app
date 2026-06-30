@@ -1102,10 +1102,28 @@ def show_client_job_review(job, job_number):
         st.session_state.guided_step = find_question_step("job_title")
         st.rerun()
 
+
+
+
     review_row("Job title", job.get("job_title"))
     review_row("Employer", job.get("employer"))
-    review_row("Dates", f"{job.get('dates_from') or 'Not answered'} to {job.get('dates_to') or 'Not answered'}")
-    review_row("Pay", f"{job.get('pay_rate') or 'Not answered'} per {job.get('pay_type') or 'Not answered'}")
+
+    dates_from = job.get("dates_from")
+    dates_to = job.get("dates_to")
+
+    if is_blank(dates_from) or is_blank(dates_to):
+        review_row("Dates", "")
+    else:
+        review_row("Dates", f"{dates_from} to {dates_to}")
+
+    pay_rate = job.get("pay_rate")
+    pay_type = job.get("pay_type")
+
+    if is_blank(pay_rate):
+        review_row("Pay", "")
+    else:
+        review_row("Pay", f"{pay_rate} per {pay_type}")
+
     review_row("Hours per day", job.get("hours_per_day"))
     review_row("Days per week", job.get("days_per_week"))
 
