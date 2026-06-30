@@ -1082,6 +1082,12 @@ def review_row(label, value):
     display_value = value if not is_blank(value) else "Not answered"
     st.write(f"{answer_status(value)} **{label}:** {display_value}")
 
+def review_dependent_row(label, parent_value, value):
+    if is_blank(parent_value):
+        review_row(label, "")
+    else:
+        review_row(label, value)    
+
 
 def review_section(title):
     st.markdown("---")
@@ -1157,14 +1163,35 @@ def show_client_job_review(job, job_number):
     review_row("Kneeling", physical.get("kneeling"))
     review_row("Crouching", physical.get("crouching"))
     review_row("Crawling", physical.get("crawling"))
+
     review_row("Finger use", physical.get("fingers_time"))
-    review_row("Finger hand usage", physical.get("fingers_hand_usage"))
+    review_dependent_row(
+        "Finger hand usage",
+        physical.get("fingers_time"),
+        physical.get("fingers_hand_usage")
+    )
+
     review_row("Grasping / holding", physical.get("grasping_time"))
-    review_row("Grasping hand usage", physical.get("grasping_hand_usage"))
+    review_dependent_row(
+        "Grasping hand usage",
+        physical.get("grasping_time"),
+        physical.get("grasping_hand_usage")
+    )
+
     review_row("Reaching at/below shoulder", physical.get("reaching_below_time"))
-    review_row("Reaching below arm usage", physical.get("reaching_below_arm_usage"))
+    review_dependent_row(
+        "Reaching below arm usage",
+        physical.get("reaching_below_time"),
+        physical.get("reaching_below_arm_usage")
+    )
+
     review_row("Reaching overhead", physical.get("reaching_overhead_time"))
-    review_row("Reaching overhead arm usage", physical.get("reaching_overhead_arm_usage"))
+    review_dependent_row(
+        "Reaching overhead arm usage",
+        physical.get("reaching_overhead_time"),
+        physical.get("reaching_overhead_arm_usage")
+    )
+
     review_row("Stairs / ramps", physical.get("stairs"))
     review_row("Ladders / scaffolds", physical.get("ladders"))
 
