@@ -1146,7 +1146,10 @@ def show_client_job_review(job, job_number):
     review_row("Tools / equipment", job.get("equipment"))
 
     review_section("👥 People Interaction")
-    review_row("Interacted with people", job.get("interacted_with_people"))
+    if is_blank(job.get("job_duties")):
+        review_row("Interacted with people", "")
+    else:
+        review_row("Interacted with people", job.get("interacted_with_people"))
     if job.get("interacted_with_people") == "Yes":
         review_row("Interaction details", job.get("interaction_details"))
 
@@ -1222,7 +1225,10 @@ def show_client_job_review(job, job_number):
         st.session_state.guided_step = find_question_step("exposure_checkboxes")
         st.rerun()
 
-    review_row("Selected workplace conditions", ", ".join(selected_exposures) if selected_exposures else "None selected")
+    if is_blank(job.get("exposure_description")):
+        review_row("Selected workplace conditions", "")
+    else:
+        review_row("Selected workplace conditions", ", ".join(selected_exposures) if selected_exposures else "None selected")
     review_row("Exposure description", job.get("exposure_description"))
 
     review_section("🩺 Medical Conditions")
