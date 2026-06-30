@@ -139,7 +139,20 @@ def is_acceptable_time_answer(answer):
 
     return False
 
-
+TIME_UNIT_KEYS = {
+    "standing_walking",
+    "sitting",
+    "stooping",
+    "kneeling",
+    "crouching",
+    "crawling",
+    "fingers_time",
+    "grasping_time",
+    "reaching_below_time",
+    "reaching_overhead_time",
+    "stairs",
+    "ladders",
+}
 
 def empty_function_report():
     return {
@@ -321,7 +334,7 @@ GUIDED_QUESTIONS = [
     {"key": "days_per_week", "target": "job", "icon": "🗓️", "question": "How many days did you usually work per week?", "helper": "Enter the average number of days you worked each week (0–7).", "type": "number", "min": 0, "max": 7},
     {"key": "job_duties", "target": "job", "icon": "📝", "question": "What did you do during a typical workday?", "helper": "Describe the main tasks you did.", "type": "textarea", "check_type": "job_duties"},
     {"key": "reports", "target": "job", "icon": "📄", "question": "Did this job involve writing, reports, forms, or computer work?", "helper": "Write No if it did not. If yes, describe what you completed and about how often.", "type": "textarea", "check_type": "reports"},
-    {"key": "supervise", "target": "job", "icon": "👥", "question": "Did you supervise other people?", "helper": "Write No if not. If yes, describe who/how many and what you did.", "type": "textarea"},
+    {"key": "supervise", "target": "job", "icon": "👥", "question": "Did you supervise other people?", "helper": "Write No if not. If yes, describe who/how many and what you did.", "type": "textarea", "check_type": "supervise"},
     {"key": "equipment", "target": "job", "icon": "🧰", "question": "What tools, machines, or equipment did you use?", "helper": "Examples: computer, phone, register, scanner, cart, forklift, kitchen tools.", "type": "textarea", "check_type": "equipment"},
     {"key": "interacted_with_people", "target": "job", "icon": "🗣️", "question": "Did this job require interaction with coworkers, customers, the public, supervisors, or anyone else?", "helper": "Choose Yes or No.", "type": "radio", "options": ["No", "Yes"]},
     {"key": "interaction_details", "target": "job", "icon": "💬", "question": "Who did you interact with and why?", "helper": "Include who, why, and how often if you can.", "type": "textarea", "depends_on": {"key": "interacted_with_people", "value": "Yes"}, "check_type": "interaction_details"},
@@ -1029,6 +1042,37 @@ def answer_status(value):
         return "⚠️"
     return "✅"
 
+def normalize_answer(question, answer):
+    if question.get("key") in TIME_UNIT_KEYS:
+        return normalize_none_time_answer(answer)
+
+    return answer
+
+
+def normalize_none_time_answer(answer):
+    answer_text = str(answer or "").strip().lower()
+
+    none_answers = [
+        "i didn't",
+        "i didnt",
+        "i did not",
+        "did not",
+        "didn't",
+        "didnt",
+        "no",
+        "none",
+        "not at all",
+        "never",
+        "n/a",
+        "na",
+        "not applicable",
+    ]
+
+    if answer_text in none_answers:
+        return "None"
+
+    return answer
+
 
 def review_row(label, value):
     display_value = value if not is_blank(value) else "Not answered"
@@ -1156,12 +1200,11 @@ def show_client_job_review(job, job_number):
 
                 target_key = get_warning_target_key(clean_warning)
                 target_step = find_question_step(target_key)
-                question_number = target_step + 1
 
                 col1, col2 = st.columns([5, 1])
 
                 with col1:
-                    st.write(f"**Q{question_number}:** {clean_warning}")
+                    st.write(clean_warning)
 
                 with col2:
                     if st.button(
@@ -1533,8 +1576,33 @@ job_title, employer, dates_from, dates_to, pay_rate, pay_type
 Rules:
 - Do not guess.
 - If missing, use "".
-- job_title should be only the job title, not the full sentence.
+- Do not include explanations.
+
+Job title rules:
+- job_title should contain ONLY the actual job title.
+- Do NOT include employer names.
+- Do NOT include dates.
+- Do NOT include pay.
+- Do NOT include years worked.
+- Do NOT include words like "for", "at", or the rest of the sentence.
+
+Examples:
+Input: "warehouse worker for Amazon for 13 years"
+job_title = "warehouse worker"
+employer = "Amazon"
+
+Input: "cashier at Target from 2021 to 2024"
+job_title = "cashier"
+employer = "Target"
+
+Input: "registered nurse at Mayo Clinic"
+job_title = "registered nurse"
+employer = "Mayo Clinic"
+
+Employer rules:
 - employer should be only the company/person/business name.
+
+Pay rules:
 - pay_rate should be only the number or range, without words. Examples: "18", "13000", "18-20".
 - pay_type must be exactly one of: hour, day, week, month, year, or "".
 - If the answer says "a year", "per year", "yearly", "annual", "annually", or "salary", pay_type must be "year".
@@ -1542,8 +1610,9 @@ Rules:
 - If the answer says "a week", "per week", or "weekly", pay_type must be "week".
 - If the answer says "a day", "per day", or "daily", pay_type must be "day".
 - If the answer says "an hour", "per hour", "hourly", "hr", or "/hr", pay_type must be "hour".
+
+Date rules:
 - Convert dates like "5/2022" to "May 2022" if possible.
-- Do not include explanations.
 - Convert dates like "January 3rd 2024" to "January 3, 2024".
 - Convert dates like "February 7th 2026" to "February 7, 2026".
 - Keep the day number if the user gives one.
@@ -1777,6 +1846,8 @@ def client_guided_mode():
     else:
         answer_for_storage = answer
 
+    answer_for_storage = normalize_answer(question, answer_for_storage)
+
     set_guided_value(question, answer_for_storage)
     apply_guided_autofill(question)
 
@@ -1987,6 +2058,7 @@ def client_guided_mode():
                 }
 
                 meaningful_extractions = [
+                    "job_title",
                     "employer",
                     "dates_from",
                     "dates_to",
