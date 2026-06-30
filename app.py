@@ -2246,6 +2246,15 @@ def format_date_for_pdf_table(date_text):
     return date_text
 
 def run_validation_for_question(question, answer, unique_key):
+    answer_to_validate = str(answer or "").strip()
+
+    if needs_time_unit(question, answer_to_validate):
+        st.warning(
+            "Please include a time type, such as hours or minutes. "
+            "Example: 6 hours, 30 minutes, none, or unknown."
+        )
+        return False
+
     if not question.get("check_type"):
         return True
 
