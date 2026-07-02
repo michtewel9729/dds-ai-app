@@ -552,18 +552,14 @@ def check_job_warnings(job, job_number):
     if job.get("interacted_with_people") == "Yes" and is_blank(job.get("interaction_details")):
         warnings.append(f"Job {job_number}: Interaction details are required because interaction is marked Yes.")
 
-    unit_words = ["hour", "hours", "hr", "hrs", "minute", "minutes", "min", "mins", "none", "n/a", "na", "unknown", "don't know", "dont know", "varied", "rarely"]
     for key, value in physical.items():
         if key.endswith("_usage"):
             continue
+
         clean = str(value or "").strip().lower()
         field_label = physical_labels.get(key, key)
 
-        if clean and clean.isdigit():
-            warnings.append(
-                f"Job {job_number}: Please review {field_label} — '{value}' needs a unit like hours/minutes, or write None."
-            )
-        elif clean and not any(unit in clean for unit in unit_words):
+        if clean and not is_acceptable_time_answer(clean):
             warnings.append(
                 f"Job {job_number}: Please review {field_label} — answer may need a unit like hours/minutes, or write None."
             )
@@ -1274,7 +1270,52 @@ def show_client_job_review(job, job_number):
         st.success("No major missing items detected. Please review before saving.")
 
 
+def value_is_yes(value):
+    return str(value or "").strip().lower() == "yes"
 
+
+def value_is_no(value):
+    return str(value or "").strip().lower() == "no"
+
+
+def review_optional_row(label, value):
+    """
+    Shows a row only if the user gave an answer.
+    Good for optional remarks/details fields.
+    """
+    if not is_blank(value):
+        review_row(label, value)
+
+
+def review_yes_no_row(label, value):
+    """
+    Yes/No answers count as completed.
+    """
+    review_row(label, value)
+
+
+def review_if_yes(label, parent_value, value):
+    """
+    Only reviews details when the parent question is Yes.
+    Example: If Drive = Yes, then review drive details.
+    """
+    if value_is_yes(parent_value):
+        review_row(label, value)
+
+
+def review_if_parent_answered(label, parent_value, value):
+    """
+    Only reviews child/details answer if the parent question was answered.
+    """
+    if not is_blank(parent_value):
+        review_row(label, value)
+
+
+def review_text_or_none(label, value):
+    """
+    Open text field where None/No problem is acceptable.
+    """
+    review_row(label, value)
 
 
 def job_memory_helper():
@@ -1446,6 +1487,126 @@ def check_in_flow_review_issues(job, current_question_key):
     return issues
 
 
+def function_review_row(label, value):
+    display_value = value if not is_blank(value) else "Not answered"
+
+    if is_blank(value):
+        status = "⚠️"
+    elif str(value).strip().lower() == "no":
+        status = "➖"
+    else:
+        status = "✅"
+
+    st.write(f"{status} **{label}:** {display_value}")
+
+
+def function_selected_list(value):
+    if isinstance(value, list):
+        return ", ".join(value) if value else ""
+    return value
+
+
+def show_function_report_review(report):
+    st.markdown("## Review Function Report")
+    st.info("Please review your answers before saving this Function Report.")
+
+    review_section("👤 Basic Information")
+    function_review_row("Name", report.get("function_name"))
+    function_review_row("Social Security number", report.get("function_ssn"))
+    function_review_row("Phone", report.get("function_phone"))
+    function_review_row("Where you live", report.get("living_place"))
+    function_review_row("Who you live with", report.get("living_with"))
+
+    review_section("🩺 Conditions and Daily Life")
+    function_review_row("How conditions limit work", report.get("condition_limits_work"))
+    function_review_row("Daily routine", report.get("daily_routine"))
+    function_review_row("What you could do before", report.get("before_conditions"))
+
+    review_section("🤝 Caring for Others / Pets")
+    function_review_row("Care for others", report.get("care_for_others"))
+    function_review_if_yes(report, "care_for_others", "care_for_others_details", "Care for others details")
+
+    function_review_row("Care for pets", report.get("care_for_pets"))
+    function_review_if_yes(report, "care_for_pets", "care_for_pets_details", "Care for pets details")
+
+    function_review_row("Help with people or animals", report.get("help_care_others_animals"))
+    function_review_if_yes(report, "help_care_others_animals", "help_care_others_animals_details", "Help details")
+
+    review_section("🌙 Sleep and Personal Care")
+    function_review_row("Sleep affected", report.get("sleep_affected"))
+    function_review_if_yes(report, "sleep_affected", "sleep_affected_details", "Sleep details")
+
+    function_review_row("Personal care", report.get("personal_care"))
+    function_review_row("Grooming reminders", report.get("needs_grooming_reminders"))
+    function_review_if_yes(report, "needs_grooming_reminders", "grooming_reminders_details", "Grooming reminder details")
+
+    function_review_row("Medicine reminders", report.get("needs_medicine_reminders"))
+    function_review_if_yes(report, "needs_medicine_reminders", "medicine_reminders_details", "Medicine reminder details")
+
+    review_section("🍳 Meals and Housework")
+    function_review_row("Prepare meals", report.get("prepare_meals"))
+    function_review_if_yes(report, "prepare_meals", "meal_preparation_details", "Meal preparation details")
+
+    function_review_optional_text(report, "meal_changes", "Cooking changes")
+    function_review_row("Housework / yard work", report.get("housework"))
+    function_review_row("Housework time and frequency", report.get("housework_time_frequency"))
+    function_review_row("Housework help", report.get("housework_help"))
+
+    review_section("🚗 Getting Around and Shopping")
+    function_review_row("How often you go outside", report.get("go_outside"))
+    function_review_row("Can go out alone", report.get("travel_alone"))
+    function_review_row("Transportation", report.get("transportation"))
+    function_review_row("Drive", report.get("drive"))
+    function_review_if_yes(report, "drive", "drive_details", "Driving details")
+
+    function_review_row("Shopping", report.get("shopping"))
+    function_review_if_yes(report, "shopping", "shopping_details", "Shopping details")
+
+    review_section("💰 Money")
+    function_review_row("Money handling", report.get("pay_bills"))
+    function_review_optional_text(report, "money_changes", "Money changes")
+
+    review_section("🎨 Hobbies and Social Activities")
+    function_review_row("Hobbies/interests", report.get("hobbies_interests"))
+    function_review_row("Hobby changes", report.get("hobbies_changes"))
+    function_review_row("Spend time with others", report.get("time_with_others"))
+    function_review_if_yes(report, "time_with_others", "time_with_others_details", "Time with others details")
+
+    function_review_optional_text(report, "social_changes", "Social changes")
+    function_review_row("Need someone to go with you", report.get("need_accompaniment"))
+    function_review_if_yes(report, "need_accompaniment", "need_accompaniment_details", "Accompaniment details")
+
+    review_section("💪 Abilities")
+    function_review_row("Affected abilities", function_selected_list(report.get("affected_abilities")))
+    function_review_row("Ability limitations", report.get("ability_limitations"))
+
+    review_section("🦯 Devices and Medications")
+    function_review_row("Assistive devices", report.get("assistive_devices"))
+    function_review_row("Devices prescribed", report.get("assistive_devices_prescribed"))
+    function_review_if_yes(report, "assistive_devices_prescribed", "assistive_devices_details", "Device details")
+
+    function_review_optional_text(report, "medication_side_effects", "Medication side effects")
+
+    review_section("📌 Remarks")
+    function_review_optional_text(report, "function_report_remarks", "Additional remarks")
+
+
+
+def function_review_if_yes(report, parent_key, detail_key, label):
+    if report.get(parent_key) == "Yes":
+        function_review_row(label, report.get(detail_key))
+
+
+def function_review_optional_text(report, key, label):
+    value = report.get(key)
+
+    if is_blank(value):
+        st.write(f"➖ **{label}:** Not answered / may not apply")
+    else:
+        function_review_row(label, value)    
+
+
+
 def find_question_step(question_key):
     for i, q in enumerate(GUIDED_QUESTIONS):
         if q.get("key") == question_key:
@@ -1454,6 +1615,9 @@ def find_question_step(question_key):
 
 def get_warning_target_key(warning):
     warning = warning.lower()
+
+    if "total activity time" in warning or "hours worked per day" in warning:
+        return "hours_per_day"
 
     if "finger/hand use" in warning:
         return "fingers_time"
@@ -2225,7 +2389,15 @@ def client_guided_mode():
             else:
                 st.warning("You can only jump to questions you already reached.")
 
+def previous_guided_step(start):
+    step = start - 1
 
+    while step >= 0:
+        if should_show_guided_question(GUIDED_QUESTIONS[step]):
+            return step
+        step -= 1
+
+    return 0
 
 def format_date_for_pdf_table(date_text):
     date_text = str(date_text or "").strip()
@@ -2421,12 +2593,40 @@ def guided_interview_mode(questions, state_key, title):
 
     if step >= total_steps:
         st.success("Interview complete.")
-        st.json(st.session_state[state_key])
 
-        if st.button("Start Over", use_container_width=True):
-            st.session_state[step_key] = 0
-            st.session_state[state_key] = {}
-            st.rerun()
+        if state_key == "function_report":
+            show_function_report_review(st.session_state[state_key])
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                if st.button("✏️ Back to Edit", use_container_width=True):
+                    st.session_state[step_key] = 0
+                    st.rerun()
+
+            with col2:
+                if st.button("💾 Save Function Report", use_container_width=True):
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = CASES_FOLDER / f"function_report_{timestamp}.json"
+
+                    with open(filename, "w", encoding="utf-8") as f:
+                        json.dump(st.session_state[state_key], f, indent=2)
+
+                    st.success(f"Function Report saved: {filename}")
+
+            with col3:
+                if st.button("Start Over", use_container_width=True):
+                    st.session_state[step_key] = 0
+                    st.session_state[state_key] = empty_function_report()
+                    st.rerun()
+
+        else:
+            st.json(st.session_state[state_key])
+
+            if st.button("Start Over", use_container_width=True):
+                st.session_state[step_key] = 0
+                st.session_state[state_key] = {}
+                st.rerun()
 
         return
 
@@ -2537,7 +2737,7 @@ def guided_interview_mode(questions, state_key, title):
 
     with col1:
         if st.button("Back", disabled=step == 0, use_container_width=True):
-            st.session_state[step_key] = max(0, step - 1)
+            st.session_state.guided_step = previous_guided_step(step)
             st.rerun()
 
     with col2:
