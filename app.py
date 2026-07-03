@@ -11,6 +11,11 @@ from ai_validation_engine import validate_answer
 import re
 from function_report_questions import FUNCTION_REPORT_QUESTIONS
 
+import function_report_questions
+
+st.write(function_report_questions.__file__)
+st.write(len(FUNCTION_REPORT_QUESTIONS))
+
 
 
 
@@ -3182,7 +3187,7 @@ def case_manager_mode():
                 mime="application/pdf",
                 use_container_width=True,
             )
-mode = st.sidebar.radio("Choose App Mode", ["Client Guided Mode", "Function Report" "Case Manager Mode"])
+mode = st.sidebar.radio("Choose App Mode", ["Client Guided Mode", "Function Report", "Case Manager Mode"])
 st.sidebar.markdown("---")
 st.sidebar.caption(APP_DISCLAIMER)
 
