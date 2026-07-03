@@ -1931,6 +1931,38 @@ def answer_changed_since_validation(question_key, current_answer):
 
     return str(previous_answer).strip() != str(current_answer).strip()
 
+def show_current_question_contradiction(question):
+    job = st.session_state.guided_job
+    physical = job["physical_activities"]
+    key = question.get("key")
+
+    none_values = ["none", "0", "0 minutes", "0 hours", "zero", "n/a", "na", "no"]
+
+    pairs = {
+        "fingers_hand_usage": ("fingers_time", "finger/hand use"),
+        "grasping_hand_usage": ("grasping_time", "grasping/holding"),
+        "reaching_below_arm_usage": ("reaching_below_time", "reaching at/below shoulder level"),
+        "reaching_overhead_arm_usage": ("reaching_overhead_time", "reaching overhead"),
+    }
+
+    if key not in pairs:
+        return
+
+    time_key, label = pairs[key]
+
+    time_answer = str(physical.get(time_key, "")).strip()
+    usage_answer = str(physical.get(key, "")).strip()
+
+    if not time_answer:
+        return
+
+    if time_answer.lower() not in none_values and usage_answer.lower() == "none":
+        st.warning(
+            f"⚠️ You previously said you spent time on {label}: **{time_answer}**.\n\n"
+            f"If that is correct, please choose One Hand/One Arm or Both Hands/Both Arms. "
+            f"If you did not do this activity, go back and change the previous answer to None."
+        )
+
 
 def client_guided_mode():
     st.title("DDS AI App")
@@ -2047,6 +2079,8 @@ def client_guided_mode():
 
     answer = render_answer_input(question, current_value, unique_key)
 
+    show_current_question_contradiction(question)
+
     saved_voice_answer = st.session_state.get(voice_text_key, "")
 
     if saved_voice_answer and str(answer).strip() and str(answer).strip() != str(saved_voice_answer).strip():
@@ -2069,6 +2103,24 @@ def client_guided_mode():
 
     set_guided_value(question, answer_for_storage)
     apply_guided_autofill(question)
+
+    if question.get("check_type"):
+        previous_validation_key = f"{unique_key}_previous_validation_answer"
+        previous_validation_answer = st.session_state.get(previous_validation_key, "")
+
+        if str(previous_validation_answer).strip() != str(answer_for_storage).strip():
+            st.session_state[f"{question['key']}_last_validated_answer"] = ""
+            st.session_state[previous_validation_key] = answer_for_storage
+
+    if question["key"] == "job_duties":
+        previous_duties_key = f"{unique_key}_previous_duties_answer"
+        previous_duties_answer = st.session_state.get(previous_duties_key, "")
+
+        if str(previous_duties_answer).strip() != str(answer_for_storage).strip():
+            st.session_state.duties_extraction_completed_for_job = False
+            st.session_state.duties_extracted_details = {}
+            st.session_state[f"{unique_key}_duties_extraction_done"] = False
+            st.session_state[previous_duties_key] = answer_for_storage
 
 
     if st.session_state.get("inline_extracted_details"):
@@ -2390,6 +2442,11 @@ def client_guided_mode():
                 st.warning("You can only jump to questions you already reached.")
 
 def previous_guided_step(start):
+    current_question = GUIDED_QUESTIONS[start]
+
+    if current_question.get("key") == "exposure_description":
+        return find_question_step("exposure_checkboxes")
+
     step = start - 1
 
     while step >= 0:
