@@ -11,10 +11,6 @@ from ai_validation_engine import validate_answer
 import re
 from function_report_questions import FUNCTION_REPORT_QUESTIONS
 
-import function_report_questions
-
-st.write(function_report_questions.__file__)
-st.write(len(FUNCTION_REPORT_QUESTIONS))
 
 
 
