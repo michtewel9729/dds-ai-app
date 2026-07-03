@@ -1486,18 +1486,25 @@ def check_in_flow_review_issues(job, current_question_key):
 
     return issues
 
+def function_answer_status(value):
+    if is_blank(value):
+        return "⚠️"
+
+    if str(value).strip().lower() in [
+        "no",
+        "none",
+        "n/a",
+        "na",
+        "not applicable",
+    ]:
+        return "➖"
+
+    return "✅"
+
 
 def function_review_row(label, value):
     display_value = value if not is_blank(value) else "Not answered"
-
-    if is_blank(value):
-        status = "⚠️"
-    elif str(value).strip().lower() == "no":
-        status = "➖"
-    else:
-        status = "✅"
-
-    st.write(f"{status} **{label}:** {display_value}")
+    st.write(f"{function_answer_status(value)} **{label}:** {display_value}")
 
 
 def function_selected_list(value):
