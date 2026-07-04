@@ -163,6 +163,7 @@ def empty_function_report():
         "living_place": "",
         "living_place_other": "",
         "living_with": "",
+        "living_with_other": "",
         "condition_limits_work": "",
         "daily_routine": "",
         "care_for_others": "No",
@@ -1534,6 +1535,12 @@ def show_function_report_review(report):
 
     function_review_row("Who you live with", report.get("living_with"))
 
+    if report.get("living_with") == "Other":
+        function_review_row(
+            "Who you live with - Other details",
+            report.get("living_with_other")
+        )
+
     review_section("🩺 Conditions and Daily Life")
     function_review_row("How conditions limit work", report.get("condition_limits_work"))
     function_review_row("Daily routine", report.get("daily_routine"))
@@ -2820,7 +2827,16 @@ def guided_interview_mode(questions, state_key, title):
 
     with col1:
         if st.button("Back", disabled=step == 0, use_container_width=True):
-            st.session_state.guided_step = previous_guided_step(step)
+            previous_step = step - 1
+
+            while previous_step >= 0:
+                if should_show_question(questions[previous_step]):
+                    st.session_state[step_key] = previous_step
+                    st.rerun()
+
+                previous_step -= 1
+
+            st.session_state[step_key] = 0
             st.rerun()
 
     with col2:
