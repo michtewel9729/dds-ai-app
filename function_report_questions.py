@@ -23,14 +23,29 @@ FUNCTION_REPORT_QUESTIONS = [
         "helper": "Include area code. If none, write None.",
         "type": "text",
     },
-    {
+        {
         "key": "living_place",
         "target": "function_report",
         "icon": "🏠",
         "question": "Where do you live?",
         "helper": "Choose the closest option.",
         "type": "select",
-        "options": ["", "House", "Apartment", "Boarding House", "Nursing Home", "Shelter", "Group Home", "Other"],
+        "options": [
+            "", "House", "Apartment", "Boarding House",
+            "Nursing Home", "Shelter", "Group Home", "Other"
+        ],
+    },
+    {
+        "key": "living_place_other",
+        "target": "function_report",
+        "icon": "🏠",
+        "question": "You selected Other. Please describe where you live.",
+        "helper": "Example: motel, transitional housing, staying with someone temporarily, or another living situation.",
+        "type": "text",
+        "depends_on": {
+            "key": "living_place",
+            "value": "Other"
+        },
     },
     {
         "key": "living_with",
@@ -39,8 +54,11 @@ FUNCTION_REPORT_QUESTIONS = [
         "question": "Who do you live with?",
         "helper": "Choose the closest option.",
         "type": "select",
-        "options": ["", "Alone", "With Family", "With Friends", "Other"],
+        "options": [
+            "", "Alone", "With Family", "With Friends", "Other"
+        ],
     },
+        
     {
         
         "key": "condition_limits_work",
