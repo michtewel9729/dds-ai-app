@@ -1525,6 +1525,13 @@ def show_function_report_review(report):
     function_review_row("Social Security number", report.get("function_ssn"))
     function_review_row("Phone", report.get("function_phone"))
     function_review_row("Where you live", report.get("living_place"))
+
+    if report.get("living_place") == "Other":
+        function_review_row(
+            "Where you live - Other details",
+            report.get("living_place_other")
+        )
+
     function_review_row("Who you live with", report.get("living_with"))
 
     review_section("🩺 Conditions and Daily Life")
