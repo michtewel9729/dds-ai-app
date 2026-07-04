@@ -156,26 +156,21 @@ TIME_UNIT_KEYS = {
 }
 
 def empty_function_report():
-    return {
-        "function_name": "",
-        "function_ssn": "",
-        "function_phone": "",
-        "living_place": "",
-        "living_place_other": "",
-        "living_with": "",
-        "living_with_other": "",
-        "condition_limits_work": "",
-        "daily_routine": "",
-        "care_for_others": "No",
-        "care_for_others_details": "",
-        "care_for_pets": "No",
-        "care_for_pets_details": "",
-        "help_care_others_animals": "No",
-        "help_care_others_animals_details": "",
-        "before_conditions": "",
-        "sleep_affected": "No",
-        "sleep_affected_details": "",
-    }
+    report = {}
+
+    for q in FUNCTION_REPORT_QUESTIONS:
+        key = q.get("key")
+        q_type = q.get("type")
+
+        if q_type == "multiselect":
+            report[key] = []
+        elif q_type == "radio":
+            options = q.get("options", [])
+            report[key] = options[0] if options else ""
+        else:
+            report[key] = ""
+
+    return report
 
 def empty_job():
     return {
@@ -1490,6 +1485,37 @@ def check_in_flow_review_issues(job, current_question_key):
 
     return issues
 
+
+def function_report_completion_score(report):
+    required_keys = [
+        "function_name",
+        "function_phone",
+        "living_place",
+        "living_with",
+        "condition_limits_work",
+        "daily_routine",
+        "before_conditions",
+        "personal_care",
+        "housework",
+        "go_outside",
+        "transportation",
+        "pay_bills",
+        "hobbies_interests",
+        "ability_limitations",
+        "assistive_devices",
+        "medication_side_effects",
+        "function_report_remarks",
+    ]
+
+    answered = 0
+
+    for key in required_keys:
+        if not is_blank(report.get(key)):
+            answered += 1
+
+    score = int((answered / len(required_keys)) * 100)
+    return score
+
 def function_answer_status(value):
     if is_blank(value):
         return "⚠️"
@@ -1520,6 +1546,19 @@ def function_selected_list(value):
 def show_function_report_review(report):
     st.markdown("## Review Function Report")
     st.info("Please review your answers before saving this Function Report.")
+
+
+    score = function_report_completion_score(report)
+
+    st.markdown("### Function Report Completion")
+    st.progress(score / 100)
+
+    if score >= 90:
+        st.success(f"{score}% complete — strong detail overall.")
+    elif score >= 70:
+        st.warning(f"{score}% complete — a few answers may need more detail.")
+    else:
+        st.error(f"{score}% complete — several important answers are missing.")
 
     review_section("👤 Basic Information")
     function_review_row("Name", report.get("function_name"))
@@ -1581,6 +1620,12 @@ def show_function_report_review(report):
     function_review_row("Can go out alone", report.get("travel_alone"))
     function_review_row("Transportation", report.get("transportation"))
     function_review_row("Drive", report.get("drive"))
+    if report.get("drive") == "No":
+        function_review_row(
+            "Why you don't drive",
+            report.get("drive_no_reason")
+        )
+
     function_review_if_yes(report, "drive", "drive_details", "Driving details")
 
     function_review_row("Shopping", report.get("shopping"))
@@ -1942,6 +1987,87 @@ def document_selector():
 
         st.rerun()
 
+
+def extract_function_daily_routine_details(answer_text):
+    if openai_client is None:
+        return {}
+
+    if not str(answer_text).strip():
+        return {}
+
+    prompt = f"""
+You are extracting possible Function Report answers from a user's daily routine answer.
+
+Return ONLY valid JSON with these exact keys:
+sleep_affected, sleep_affected_details,
+personal_care,
+prepare_meals, meal_preparation_details, prepare_meals_no_reason,
+housework, housework_time_frequency, housework_help,
+go_outside, travel_alone, travel_alone_no_reason,
+transportation,
+drive, drive_no_reason,
+shopping, shopping_details, shopping_no_reason,
+time_with_others, time_with_others_details, time_with_others_no_reason,
+assistive_devices,
+medication_side_effects
+
+Rules:
+- Do not guess.
+- If unclear, use "".
+- For Yes/No fields, only use "Yes", "No", or "".
+- Do not provide legal advice.
+- Only extract what the user clearly said.
+
+User answer:
+{answer_text}
+"""
+
+    return run_ai_json_extraction(prompt, default_result={})   
+
+
+
+
+
+def show_extraction_suggestions(
+    title,
+    extracted_key,
+    done_key,
+    target_dict,
+    completed_flag_key=None,
+    apply_label="Apply Suggestions",
+    ignore_label="Ignore Suggestions",
+):
+    extracted = st.session_state.get(extracted_key)
+
+    if not extracted:
+        return
+
+    st.info(title)
+
+    for key, value in extracted.items():
+        if str(value).strip():
+            st.write(f"**{key.replace('_', ' ').title()}:** {value}")
+
+    if st.button(apply_label):
+        for key, value in extracted.items():
+            if key in target_dict and str(value).strip():
+                target_dict[key] = value
+
+        st.session_state[extracted_key] = {}
+        st.session_state[done_key] = True
+        if completed_flag_key:
+            st.session_state[completed_flag_key] = True
+
+
+
+        st.success("Suggestions applied.")
+        st.rerun()
+
+    if st.button(ignore_label):
+        st.session_state[extracted_key] = {}
+        st.session_state[done_key] = True
+        st.rerun()
+
 def answer_changed_since_extraction(answer_key, current_answer):
     previous_key = f"{answer_key}_last_extracted_answer"
 
@@ -2215,30 +2341,15 @@ def client_guided_mode():
             st.rerun()
 
 
-    if st.session_state.get("duties_extracted_details"):
-        st.info("✨ I found some possible details from your workday answer.")
+    duties_done_key = f"{unique_key}_duties_extraction_done"
 
-        for key, value in st.session_state.duties_extracted_details.items():
-            if str(value).strip():
-                st.write(f"**{key.replace('_', ' ').title()}:** {value}")
-
-        duties_done_key = f"{unique_key}_duties_extraction_done"
-
-        if st.button("Apply These Suggestions"):
-            for key, value in st.session_state.duties_extracted_details.items():
-                if key in st.session_state.guided_job and str(value).strip():
-                    st.session_state.guided_job[key] = value
-
-            st.session_state.duties_extracted_details = {}
-            st.session_state[duties_done_key] = True
-            st.session_state.duties_extraction_completed_for_job = True
-            st.success("Suggestions applied.")
-            st.rerun()
-
-        if st.button("Ignore These Suggestions"):
-            st.session_state.duties_extracted_details = {}
-            st.session_state[duties_done_key] = True
-            st.rerun()
+    show_extraction_suggestions(
+        title="✨ I found some possible details from your workday answer.",
+        extracted_key="duties_extracted_details",
+        done_key=duties_done_key,
+        target_dict=st.session_state.guided_job,
+        completed_flag_key="duties_extraction_completed_for_job",
+    )
 
 
     issues = check_in_flow_review_issues(
@@ -2856,9 +2967,21 @@ def guided_interview_mode(questions, state_key, title):
                 question["key"], ""
             )
 
-            if question.get("check_type"):
+            if question.get("key") == "daily_routine":
+                extraction_key = f"{unique_key}_daily_routine_extraction_done"
 
+                if not st.session_state.get(extraction_key):
+                    extracted = extract_function_daily_routine_details(answer_to_check)
+
+                    if extracted:
+                        st.session_state["function_daily_routine_extracted_details"] = extracted
+                        st.session_state[extraction_key] = True
+                        st.rerun()
+
+            if question.get("check_type"):
                 answer_to_validate = str(answer_to_check).strip()
+
+                
 
                 none_like_answers = [
                     "none",
