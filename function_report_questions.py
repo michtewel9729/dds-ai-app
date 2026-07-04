@@ -58,6 +58,19 @@ FUNCTION_REPORT_QUESTIONS = [
             "", "Alone", "With Family", "With Friends", "Other"
         ],
     },
+
+    {
+        "key": "living_with_other",
+        "target": "function_report",
+        "icon": "👥",
+        "question": "You selected Other. Please describe who you live with.",
+        "helper": "Example: roommate, caregiver, friend, temporary housing, or another arrangement.",
+        "type": "text",
+        "depends_on": {
+            "key": "living_with",
+            "value": "Other"
+    },
+    },
         
     {
         
