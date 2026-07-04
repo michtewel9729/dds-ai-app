@@ -2666,8 +2666,16 @@ def guided_interview_mode(questions, state_key, title):
 
         parent_key = depends_on.get("key")
         required_value = depends_on.get("value")
+        required_contains = depends_on.get("contains")
 
-        return st.session_state[state_key].get(parent_key) == required_value
+        current_value = st.session_state[state_key].get(parent_key, "")
+
+        if required_contains:
+            if isinstance(current_value, list):
+                return required_contains in current_value
+            return required_contains in str(current_value)
+
+        return str(current_value).strip() == str(required_value).strip()
 
     def next_visible_step(start):
         while start < len(questions):
