@@ -3030,7 +3030,8 @@ def guided_interview_mode(questions, state_key, title):
             )
 
             if st.session_state.get("function_daily_routine_extracted_details"):
-                st.stop()   
+                st.warning("Please review the AI suggestions above. Click Apply Suggestions or Ignore Suggestions before continuing.")
+                st.stop() 
 
             if question.get("check_type"):
                 answer_to_validate = str(answer_to_check).strip()
