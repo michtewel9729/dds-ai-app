@@ -2144,10 +2144,14 @@ def run_ai_extraction_if_needed(question, answer_text, unique_key, state_key):
 
     extracted = rule["extractor"](answer_text)
 
+    st.write("DEBUG extracted:", extracted)
+
     useful_extracted = {
         k: v for k, v in extracted.items()
         if v and k in st.session_state[state_key]
     }
+
+    st.write("DEBUG useful:", useful_extracted)
 
     if useful_extracted:
         st.session_state[rule["extracted_key"]] = useful_extracted
