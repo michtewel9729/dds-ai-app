@@ -238,6 +238,7 @@ def init_session_state():
         "guided_job": empty_job(),
         "function_report": empty_function_report(),
         "jobs": [],
+        "case_memory": {},
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -2025,36 +2026,96 @@ def document_selector():
 
         st.rerun()
 
+def remember_answer(memory_key, value, source_label=""):
+    if is_blank(value):
+        return
 
-def extract_function_daily_routine_details(answer_text):
-    return extract_with_rules(
-        answer_text,
-        keys=[
-            "sleep_affected",
-            "sleep_affected_details",
-            "personal_care",
-            "prepare_meals",
-            "meal_preparation_details",
-            "prepare_meals_no_reason",
-            "housework",
-            "housework_time_frequency",
-            "housework_help",
-            "travel_alone",
-            "travel_alone_no_reason",
-            "transportation",
-            "drive",
-            "drive_no_reason",
-            "shopping",
-            "shopping_details",
-            "shopping_no_reason",
-            "time_with_others",
-            "time_with_others_details",
-            "time_with_others_no_reason",
-            "assistive_devices",
-            "medication_side_effects",
-        ],
-    ) 
+    if "case_memory" not in st.session_state:
+        st.session_state.case_memory = {}
 
+    st.session_state.case_memory[memory_key] = {
+        "value": value,
+        "source": source_label,
+        "updated_at": datetime.now().isoformat(),
+    }
+
+
+def get_memory_answer(memory_key):
+    memory = st.session_state.get("case_memory", {})
+    item = memory.get(memory_key)
+
+    if not item:
+        return None
+
+    return item.get("value")
+
+CROSS_FORM_MEMORY_KEYS = {
+    "standing_walking": "standing_walking",
+    "sitting": "sitting",
+    "lifting_description": "lifting",
+    "assistive_devices": "assistive_devices",
+    "medication_side_effects": "medication_side_effects",
+    "ability_limitations": "ability_limitations",
+    "daily_routine": "daily_routine",
+    "condition_limits_work": "condition_limits_work",
+}
+
+def remember_current_answer(question, value, source_label=""):
+    question_key = question.get("key")
+
+    if question_key not in CROSS_FORM_MEMORY_KEYS:
+        return
+
+    memory_key = CROSS_FORM_MEMORY_KEYS[question_key]
+
+    remember_answer(
+        memory_key,
+        value,
+        source_label=source_label,
+    )
+def show_cross_form_memory(question, target_dict):
+    question_key = question.get("key")
+
+    if question_key not in CROSS_FORM_MEMORY_KEYS:
+        return
+
+    # Don't show memory if the user already answered this question
+    current_value = target_dict.get(question_key, "")
+    if str(current_value).strip():
+        return
+
+    ignore_key = f"ignore_memory_{question_key}"
+
+    if st.session_state.get(ignore_key):
+        return
+
+    memory_key = CROSS_FORM_MEMORY_KEYS[question_key]
+    previous = get_memory_answer(memory_key)
+
+    if not previous:
+        return
+
+    st.info("✨ You may have already answered something similar in another form.")
+
+    st.write(previous)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button(
+            "Use Previous Answer",
+            key=f"use_memory_{question_key}",
+        ):
+            target_dict[question_key] = previous
+            st.rerun()
+
+    with col2:
+        if st.button(
+            "Keep Current Answer",
+            key=f"ignore_memory_{question_key}",
+        ):
+            st.session_state[ignore_key] = True
+            st.rerun()
 
 def extract_function_condition_limits_details(answer_text):
     return extract_with_rules(
@@ -2716,6 +2777,12 @@ def client_guided_mode():
                 if should_skip_after_autofill(question):
                     next_step = next_guided_step(next_step + 1)
 
+                remember_current_answer(
+                    question,
+                    answer_to_check,
+                    source_label="work_history",
+                )
+
                 st.session_state.guided_step = next_step
 
             st.rerun()
@@ -3061,6 +3128,11 @@ def guided_interview_mode(questions, state_key, title):
 
     st.session_state[state_key][question["key"]] = answer_for_storage
 
+    show_cross_form_memory(
+        question,
+        st.session_state[state_key],
+    )
+
 
     rule = AI_EXTRACTION_RULES.get(question.get("key"))
 
@@ -3215,7 +3287,14 @@ def guided_interview_mode(questions, state_key, title):
                             "AI review could not read the response, but you can continue."
                         )
           
+            remember_current_answer(
+                question,
+                answer_to_check,
+                source_label=state_key,
 
+                
+            )
+            
             st.session_state[step_key] = next_visible_step(step + 1)
             st.rerun()
 
