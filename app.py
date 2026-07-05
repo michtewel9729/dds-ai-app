@@ -2213,6 +2213,53 @@ def show_current_question_contradiction(question):
             f"If that is correct, please choose One Hand/One Arm or Both Hands/Both Arms. "
             f"If you did not do this activity, go back and change the previous answer to None."
         )
+def extract_function_before_conditions_details(answer_text):
+    if openai_client is None:
+        return {}
+
+    if not str(answer_text).strip():
+        return {}
+
+    prompt = f"""
+You are helping complete a Social Security Function Report.
+
+Extract ONLY information that is clearly stated.
+
+Return ONLY valid JSON.
+
+Use these exact keys:
+
+affected_abilities
+ability_limitations
+prepare_meals
+prepare_meals_no_reason
+drive
+drive_no_reason
+shopping
+shopping_no_reason
+time_with_others
+time_with_others_no_reason
+social_changes
+function_report_remarks
+
+Rules:
+- Do not guess.
+- If unclear, use "".
+- For Yes/No fields, only use "Yes", "No", or "".
+- Only fill Yes/No fields when the user clearly says it.
+- If a Yes/No answer is only implied or uncertain, use "".
+- For No answers, include the reason when clearly stated.
+- affected_abilities must be a JSON list.
+- Do not fill frequency/time questions such as how often, how long, or when.
+
+User answer:
+{answer_text}
+"""
+
+    return run_ai_json_extraction(prompt, default_result={})
+
+
+
 
 AI_EXTRACTION_RULES = {
     "daily_routine": {
