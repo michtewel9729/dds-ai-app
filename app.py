@@ -1957,6 +1957,44 @@ Job duties answer:
         },
     ) 
 
+def extract_with_rules(answer_text, keys, extra_rules=""):
+    if openai_client is None:
+        return {}
+
+    if not str(answer_text).strip():
+        return {}
+
+    key_list = "\n".join(keys)
+
+    prompt = f"""
+You are helping complete a Social Security form.
+
+Extract ONLY information that is clearly stated.
+
+Return ONLY valid JSON using these exact keys:
+
+{key_list}
+
+Rules:
+- Do not guess.
+- If unclear, use "".
+- For Yes/No fields, only use "Yes", "No", or "".
+- Only fill Yes/No fields when the user clearly says it.
+- If a Yes/No answer is only implied or uncertain, use "".
+- For No answers, include the reason when clearly stated.
+- Do not provide legal advice.
+- Do not fill frequency/time questions such as how often, how long, or when.
+- affected_abilities must be a JSON list if included.
+
+Additional rules:
+{extra_rules}
+
+User answer:
+{answer_text}
+"""
+
+    return run_ai_json_extraction(prompt, default_result={})
+
 
 def document_selector():
     st.title("DDS AI App")
@@ -1989,107 +2027,52 @@ def document_selector():
 
 
 def extract_function_daily_routine_details(answer_text):
-    if openai_client is None:
-        return {}
-
-    if not str(answer_text).strip():
-        return {}
-
-    prompt = f"""
-You are extracting possible Function Report answers from a user's daily routine answer.
-
-Return ONLY valid JSON with these exact keys:
-sleep_affected, sleep_affected_details,
-personal_care,
-prepare_meals, meal_preparation_details, prepare_meals_no_reason,
-housework, housework_time_frequency, housework_help,
-travel_alone, travel_alone_no_reason,
-transportation,
-drive, drive_no_reason,
-shopping, shopping_details, shopping_no_reason,
-time_with_others, time_with_others_details, time_with_others_no_reason,
-assistive_devices,
-medication_side_effects
-
-Rules:
-- Do not guess.
-- If unclear, use "".
-- For Yes/No fields, only use "Yes", "No", or "".
-- Do not provide legal advice.
-- Only extract what the user clearly said.
-- Only fill Yes/No fields when the user clearly says it.
-- If a Yes/No answer is only implied or uncertain, use "".
-- For No answers, include the reason when clearly stated.
-- Do not fill frequency/time questions such as how often, how long, or when.
-
-User answer:
-{answer_text}
-"""
-
-    return run_ai_json_extraction(prompt, default_result={})   
+    return extract_with_rules(
+        answer_text,
+        keys=[
+            "sleep_affected",
+            "sleep_affected_details",
+            "personal_care",
+            "prepare_meals",
+            "meal_preparation_details",
+            "prepare_meals_no_reason",
+            "housework",
+            "housework_time_frequency",
+            "housework_help",
+            "travel_alone",
+            "travel_alone_no_reason",
+            "transportation",
+            "drive",
+            "drive_no_reason",
+            "shopping",
+            "shopping_details",
+            "shopping_no_reason",
+            "time_with_others",
+            "time_with_others_details",
+            "time_with_others_no_reason",
+            "assistive_devices",
+            "medication_side_effects",
+        ],
+    ) 
 
 
 def extract_function_condition_limits_details(answer_text):
-    if openai_client is None:
-        return {}
-
-    if not str(answer_text).strip():
-        return {}
-
-    prompt = f"""
-You are helping complete a Social Security Function Report.
-
-Extract ONLY information that is clearly stated.
-
-Return ONLY valid JSON.
-
-Use these exact keys:
-
-affected_abilities
-ability_limitations
-assistive_devices
-medication_side_effects
-sleep_affected
-sleep_affected_details
-function_report_remarks
-
-Rules:
-
-- Only extract information explicitly mentioned.
-- Never guess.
-- If unknown, return "".
-- affected_abilities must be a JSON list.
-- affected_abilities can ONLY contain these exact values:
-  "Lifting",
-  "Squatting",
-  "Bending",
-  "Standing",
-  "Reaching",
-  "Walking",
-  "Sitting",
-  "Kneeling",
-  "Stair Climbing",
-  "Seeing",
-  "Using Hands",
-  "Remembering",
-  "Completing Tasks",
-  "Concentrating",
-  "Understanding",
-  "Following Instructions",
-  "Getting Along With Others",
-  "Handling Stress",
-  "Handling Changes In Routine",
-  "None"
-- Do not include any value that is not in the list above.
-- Do not invent disabilities.
-- Do not infer Yes/No answers unless they are explicitly stated.
-
-User answer:
-
-{answer_text}
-"""
-
-    return run_ai_json_extraction(prompt, default_result={})
+    return extract_with_rules(
+        answer_text,
+        keys=[
+            "affected_abilities",
+            "ability_limitations",
+            "assistive_devices",
+            "medication_side_effects",
+            "sleep_affected",
+            "sleep_affected_details",
+            "function_report_remarks",
+        ],
+        extra_rules="""
+affected_abilities can ONLY contain these exact values:
+"Lifting", "Squatting", "Bending", "Standing", "Reaching", "Walking", "Sitting", "Kneeling", "Stair Climbing", "Seeing", "Using Hands", "Remembering", "Completing Tasks", "Concentrating", "Understanding", "Following Instructions", "Getting Along With Others", "Handling Stress", "Handling Changes In Routine", "None"
+""",
+    )
 
 
 
@@ -2214,50 +2197,27 @@ def show_current_question_contradiction(question):
             f"If you did not do this activity, go back and change the previous answer to None."
         )
 def extract_function_before_conditions_details(answer_text):
-    if openai_client is None:
-        return {}
-
-    if not str(answer_text).strip():
-        return {}
-
-    prompt = f"""
-You are helping complete a Social Security Function Report.
-
-Extract ONLY information that is clearly stated.
-
-Return ONLY valid JSON.
-
-Use these exact keys:
-
-affected_abilities
-ability_limitations
-prepare_meals
-prepare_meals_no_reason
-drive
-drive_no_reason
-shopping
-shopping_no_reason
-time_with_others
-time_with_others_no_reason
-social_changes
-function_report_remarks
-
-Rules:
-- Do not guess.
-- If unclear, use "".
-- For Yes/No fields, only use "Yes", "No", or "".
-- Only fill Yes/No fields when the user clearly says it.
-- If a Yes/No answer is only implied or uncertain, use "".
-- For No answers, include the reason when clearly stated.
-- affected_abilities must be a JSON list.
-- Do not fill frequency/time questions such as how often, how long, or when.
-
-User answer:
-{answer_text}
-"""
-
-    return run_ai_json_extraction(prompt, default_result={})
-
+    return extract_with_rules(
+        answer_text,
+        keys=[
+            "affected_abilities",
+            "ability_limitations",
+            "prepare_meals",
+            "prepare_meals_no_reason",
+            "drive",
+            "drive_no_reason",
+            "shopping",
+            "shopping_no_reason",
+            "time_with_others",
+            "time_with_others_no_reason",
+            "social_changes",
+            "function_report_remarks",
+        ],
+        extra_rules="""
+affected_abilities can ONLY contain these exact values:
+"Lifting", "Squatting", "Bending", "Standing", "Reaching", "Walking", "Sitting", "Kneeling", "Stair Climbing", "Seeing", "Using Hands", "Remembering", "Completing Tasks", "Concentrating", "Understanding", "Following Instructions", "Getting Along With Others", "Handling Stress", "Handling Changes In Routine", "None"
+""",
+    )
 
 
 
