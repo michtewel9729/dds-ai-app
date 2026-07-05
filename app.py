@@ -2066,6 +2066,10 @@ def show_extraction_suggestions(
     if st.button(ignore_label):
         st.session_state[extracted_key] = {}
         st.session_state[done_key] = True
+
+        if completed_flag_key:
+            st.session_state[completed_flag_key] = True
+
         st.rerun()
 
 def answer_changed_since_extraction(answer_key, current_answer):
@@ -2112,6 +2116,46 @@ def show_current_question_contradiction(question):
             f"If that is correct, please choose One Hand/One Arm or Both Hands/Both Arms. "
             f"If you did not do this activity, go back and change the previous answer to None."
         )
+
+AI_EXTRACTION_RULES = {
+    "daily_routine": {
+        "extracted_key": "function_daily_routine_extracted_details",
+        "done_suffix": "daily_routine_extraction_done",
+        "target_state_key": "function_report",
+        "extractor": extract_function_daily_routine_details,
+        "message": "✨ I found some possible details from your daily routine answer.",
+        "completed_flag_key": "function_daily_routine_extraction_completed_for_report",
+    },
+}
+
+
+def run_ai_extraction_if_needed(question, answer_text, unique_key, state_key):
+    rule = AI_EXTRACTION_RULES.get(question.get("key"))
+
+    if not rule:
+        return
+
+    if rule.get("target_state_key") != state_key:
+        return
+
+    done_key = f"{unique_key}_{rule['done_suffix']}"
+
+    if st.session_state.get(done_key):
+        return
+
+    extracted = rule["extractor"](answer_text)
+
+    st.write("DEBUG extracted:", extracted)
+
+    useful_extracted = {
+        k: v for k, v in extracted.items()
+        if v and k in st.session_state[state_key]
+    }
+    st.write("DEBUG useful extracted:", useful_extracted)
+
+    if useful_extracted:
+        st.session_state[rule["extracted_key"]] = useful_extracted
+        st.rerun()        
 
 
 def client_guided_mode():
@@ -2397,7 +2441,18 @@ def client_guided_mode():
                         st.warning("No transcript was created. Please try again.")
                         st.write("Debug: transcript value was:", transcript)
 
+    rule = AI_EXTRACTION_RULES.get(question.get("key"))
 
+    if rule and rule.get("target_state_key") == state_key:
+        done_key = f"{unique_key}_{rule['done_suffix']}"
+
+        show_extraction_suggestions(
+            title=rule["message"],
+            extracted_key=rule["extracted_key"],
+            done_key=done_key,
+            target_dict=st.session_state[state_key],
+            completed_flag_key=rule.get("completed_flag_key"),
+        )
 
     with st.expander("💬 Need help with this question?"):
         help_question = st.text_input(
@@ -2967,16 +3022,12 @@ def guided_interview_mode(questions, state_key, title):
                 question["key"], ""
             )
 
-            if question.get("key") == "daily_routine":
-                extraction_key = f"{unique_key}_daily_routine_extraction_done"
-
-                if not st.session_state.get(extraction_key):
-                    extracted = extract_function_daily_routine_details(answer_to_check)
-
-                    if extracted:
-                        st.session_state["function_daily_routine_extracted_details"] = extracted
-                        st.session_state[extraction_key] = True
-                        st.rerun()
+            run_ai_extraction_if_needed(
+                question,
+                answer_to_check,
+                unique_key,
+                state_key,
+            )   
 
             if question.get("check_type"):
                 answer_to_validate = str(answer_to_check).strip()
