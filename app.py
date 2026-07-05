@@ -2029,6 +2029,46 @@ User answer:
     return run_ai_json_extraction(prompt, default_result={})   
 
 
+def extract_function_condition_limits_details(answer_text):
+    if openai_client is None:
+        return {}
+
+    if not str(answer_text).strip():
+        return {}
+
+    prompt = f"""
+You are helping complete a Social Security Function Report.
+
+Extract ONLY information that is clearly stated.
+
+Return ONLY valid JSON.
+
+Use these exact keys:
+
+affected_abilities
+ability_limitations
+assistive_devices
+medication_side_effects
+sleep_affected
+sleep_affected_details
+function_report_remarks
+
+Rules:
+
+- Only extract information explicitly mentioned.
+- Never guess.
+- If unknown, return "".
+- affected_abilities must be a list.
+- Do not invent disabilities.
+- Do not infer Yes/No answers unless they are explicitly stated.
+
+User answer:
+
+{answer_text}
+"""
+
+    return run_ai_json_extraction(prompt, default_result={})
+
 
 
 
@@ -2130,7 +2170,16 @@ AI_EXTRACTION_RULES = {
         "message": "✨ I found some possible details from your daily routine answer.",
         "completed_flag_key": "function_daily_routine_extraction_completed_for_report",
     },
-}
+
+        "condition_limits_work": {
+        "extracted_key": "function_condition_limits_extracted_details",
+        "done_suffix": "condition_limits_extraction_done",
+        "target_state_key": "function_report",
+        "extractor": extract_function_condition_limits_details,
+        "message": "✨ I found some possible details from your condition answer.",
+        "completed_flag_key": "function_condition_limits_extraction_completed_for_report",
+    },
+    }
 
 def run_ai_extraction_if_needed(question, answer_text, unique_key, state_key):
     rule = AI_EXTRACTION_RULES.get(question.get("key"))
