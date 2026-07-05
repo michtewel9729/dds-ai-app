@@ -2017,6 +2017,10 @@ Rules:
 - For Yes/No fields, only use "Yes", "No", or "".
 - Do not provide legal advice.
 - Only extract what the user clearly said.
+- Only fill Yes/No fields when the user clearly says it.
+- If a Yes/No answer is only implied or uncertain, use "".
+- For No answers, include the reason when clearly stated.
+- Do not fill frequency/time questions such as how often, how long, or when.
 
 User answer:
 {answer_text}
