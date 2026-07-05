@@ -105,6 +105,23 @@ FUNCTION_REPORT_QUESTIONS = [
         
     },
     {
+        "key": "care_for_others_no_reason",
+        "target": "function_report",
+        "icon": "🤝",
+        "question": "Is there a reason you do not care for anyone else?",
+        "helper": "If your conditions prevent you from caring for others, explain how. Otherwise you can write 'Not applicable.'",
+        "type": "textarea",
+        "depends_on": {
+            "key": "care_for_others",
+            "value": "No"
+    },
+    },
+
+
+
+
+
+    {
         "key": "care_for_others_details",
         "target": "function_report",
         "icon": "🤝",
@@ -236,6 +253,26 @@ FUNCTION_REPORT_QUESTIONS = [
         "type": "radio",
         "options": ["No", "Yes"],
     },
+    
+    {
+        "key": "prepare_meals_no_reason",
+        "target": "function_report",
+        "icon": "🍳",
+        "question": "Why don't you prepare your own meals?",
+        "helper": "Examples: pain, fatigue, memory problems, someone else cooks, safety concerns, or another reason.",
+        "type": "textarea",
+        "depends_on": {
+            "key": "prepare_meals",
+            "value": "No"
+        },
+        "check_type": "meal_preparation",
+    },
+
+
+
+
+
+
     {
         "key": "meal_preparation_details",
         "target": "function_report",
@@ -246,6 +283,7 @@ FUNCTION_REPORT_QUESTIONS = [
         "depends_on": {"key": "prepare_meals", "value": "Yes"},
         "check_type": "meal_preparation",
     },
+
     {
         "key": "meal_changes",
         "target": "function_report",
@@ -301,6 +339,25 @@ FUNCTION_REPORT_QUESTIONS = [
         "options": ["No", "Yes"],
     },
     {
+        "key": "travel_alone_no_reason",
+        "target": "function_report",
+        "icon": "🚶",
+        "question": "Why can't you go out by yourself?",
+        "helper": "Examples: safety, memory, anxiety, balance, vision, getting lost, or another reason.",
+        "type": "textarea",
+        "depends_on": {
+            "key": "travel_alone",
+            "value": "No"
+        },
+        "check_type": "getting_around",
+    },
+
+
+
+
+
+
+    {
         "key": "transportation",
         "target": "function_report",
         "icon": "🚗",
@@ -330,6 +387,22 @@ FUNCTION_REPORT_QUESTIONS = [
     },
 
     {
+        "key": "drive_no_reason",
+        "target": "function_report",
+        "icon": "🚫",
+        "question": "Why don't you drive?",
+        "helper": "Examples: vision problems, seizures, anxiety, medication side effects, no license, someone else drives me, or another reason.",
+        "type": "textarea",
+        "depends_on": {
+            "key": "drive",
+            "value": "No"
+        },
+        "check_type": "getting_around",
+    },
+
+
+
+    {
         "key": "shopping",
         "target": "function_report",
         "icon": "🛒",
@@ -338,6 +411,25 @@ FUNCTION_REPORT_QUESTIONS = [
         "type": "radio",
         "options": ["No", "Yes"],
     },
+
+    {
+        "key": "shopping_no_reason",
+        "target": "function_report",
+        "icon": "🛒",
+        "question": "Why don't you shop for groceries, clothing, or other items?",
+        "helper": "Examples: someone shops for me, pain, anxiety, transportation problems, or another reason.",
+        "type": "textarea",
+        "depends_on": {
+            "key": "shopping",
+            "value": "No"
+        },
+        "check_type": "shopping",
+    },
+
+
+
+
+
     {
         "key": "shopping_details",
         "target": "function_report",
@@ -394,6 +486,24 @@ FUNCTION_REPORT_QUESTIONS = [
         "type": "radio",
         "options": ["No", "Yes"],
     },
+    {
+        "key": "time_with_others_no_reason",
+        "target": "function_report",
+        "icon": "👥",
+        "question": "Why don't you spend time with other people?",
+        "helper": "Examples: anxiety, depression, pain, fatigue, prefer to stay home, or another reason.",
+        "type": "textarea",
+        "depends_on": {
+            "key": "time_with_others",
+            "value": "No"
+        },
+        "check_type": "social_activities",
+    },
+
+
+
+
+
     {
         "key": "time_with_others_details",
         "target": "function_report",
