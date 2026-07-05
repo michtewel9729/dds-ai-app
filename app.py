@@ -2050,14 +2050,20 @@ def get_memory_answer(memory_key):
     return item.get("value")
 
 CROSS_FORM_MEMORY_KEYS = {
+    # Work History → concepts
     "standing_walking": "standing_walking",
     "sitting": "sitting",
     "lifting_description": "lifting",
+    "medical_conditions": "condition_limits",
+    "job_duties": "work_activities",
+
+    # Function Report → same concepts
+    "condition_limits_work": "condition_limits",
+    "ability_limitations": "condition_limits",
     "assistive_devices": "assistive_devices",
     "medication_side_effects": "medication_side_effects",
-    "ability_limitations": "ability_limitations",
     "daily_routine": "daily_routine",
-    "condition_limits_work": "condition_limits_work",
+    "before_conditions": "before_conditions",
 }
 
 def remember_current_answer(question, value, source_label=""):
