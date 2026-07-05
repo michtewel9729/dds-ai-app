@@ -3023,7 +3023,10 @@ def guided_interview_mode(questions, state_key, title):
                 answer_to_check,
                 unique_key,
                 state_key,
-            )   
+            )
+
+            if st.session_state.get("function_daily_routine_extracted_details"):
+                st.stop()   
 
             if question.get("check_type"):
                 answer_to_validate = str(answer_to_check).strip()
