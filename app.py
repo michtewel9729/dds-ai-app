@@ -2232,6 +2232,15 @@ AI_EXTRACTION_RULES = {
         "message": "✨ I found some possible details from your condition answer.",
         "completed_flag_key": "function_condition_limits_extraction_completed_for_report",
     },
+        "before_conditions": {
+        "extracted_key": "function_before_conditions_extracted_details",
+        "done_suffix": "before_conditions_extraction_done",
+        "target_state_key": "function_report",
+        "extractor": extract_function_before_conditions_details,
+        "message": "✨ I found some possible details from what you could do before.",
+        "completed_flag_key": "function_before_conditions_extraction_completed_for_report",
+    },
+
     }
 
 def run_ai_extraction_if_needed(question, answer_text, unique_key, state_key):
