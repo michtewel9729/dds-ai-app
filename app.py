@@ -2128,7 +2128,6 @@ AI_EXTRACTION_RULES = {
     },
 }
 
-
 def run_ai_extraction_if_needed(question, answer_text, unique_key, state_key):
     rule = AI_EXTRACTION_RULES.get(question.get("key"))
 
@@ -2145,18 +2144,15 @@ def run_ai_extraction_if_needed(question, answer_text, unique_key, state_key):
 
     extracted = rule["extractor"](answer_text)
 
-    st.write("DEBUG extracted:", extracted)
-
     useful_extracted = {
         k: v for k, v in extracted.items()
         if v and k in st.session_state[state_key]
     }
-    st.write("DEBUG useful extracted:", useful_extracted)
 
     if useful_extracted:
         st.session_state[rule["extracted_key"]] = useful_extracted
-        st.rerun()        
-
+        st.session_state[done_key] = True
+        st.rerun()
 
 def client_guided_mode():
     st.title("DDS AI App")
