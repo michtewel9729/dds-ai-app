@@ -2123,6 +2123,37 @@ def show_cross_form_memory(question, target_dict):
             st.session_state[ignore_key] = True
             st.rerun()
 
+
+
+def extract_function_daily_routine_details(answer_text):
+    return extract_with_rules(
+        answer_text,
+        keys=[
+            "sleep_affected",
+            "sleep_affected_details",
+            "personal_care",
+            "prepare_meals",
+            "meal_preparation_details",
+            "prepare_meals_no_reason",
+            "housework",
+            "housework_time_frequency",
+            "housework_help",
+            "travel_alone",
+            "travel_alone_no_reason",
+            "transportation",
+            "drive",
+            "drive_no_reason",
+            "shopping",
+            "shopping_details",
+            "shopping_no_reason",
+            "time_with_others",
+            "time_with_others_details",
+            "time_with_others_no_reason",
+            "assistive_devices",
+            "medication_side_effects",
+        ],
+    )
+
 def extract_function_condition_limits_details(answer_text):
     return extract_with_rules(
         answer_text,
