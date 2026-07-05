@@ -2687,13 +2687,13 @@ def client_guided_mode():
             previous_step = step - 1
 
             while previous_step >= 0:
-                if should_show_question(questions[previous_step]):
-                    st.session_state[step_key] = previous_step
+                if should_show_guided_question(GUIDED_QUESTIONS[previous_step]):
+                    st.session_state.guided_step = previous_step
                     st.rerun()
 
                 previous_step -= 1
 
-            st.session_state[step_key] = 0
+            st.session_state.guided_step = 0
             st.rerun()
 
     with col2:
