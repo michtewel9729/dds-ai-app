@@ -2058,7 +2058,29 @@ Rules:
 - Only extract information explicitly mentioned.
 - Never guess.
 - If unknown, return "".
-- affected_abilities must be a list.
+- affected_abilities must be a JSON list.
+- affected_abilities can ONLY contain these exact values:
+  "Lifting",
+  "Squatting",
+  "Bending",
+  "Standing",
+  "Reaching",
+  "Walking",
+  "Sitting",
+  "Kneeling",
+  "Stair Climbing",
+  "Seeing",
+  "Using Hands",
+  "Remembering",
+  "Completing Tasks",
+  "Concentrating",
+  "Understanding",
+  "Following Instructions",
+  "Getting Along With Others",
+  "Handling Stress",
+  "Handling Changes In Routine",
+  "None"
+- Do not include any value that is not in the list above.
 - Do not invent disabilities.
 - Do not infer Yes/No answers unless they are explicitly stated.
 
@@ -2094,8 +2116,39 @@ def show_extraction_suggestions(
 
     if st.button(apply_label):
         for key, value in extracted.items():
-            if key in target_dict and str(value).strip():
-                target_dict[key] = value
+            if key in target_dict and value not in ["", None, []]:
+
+                if key == "affected_abilities":
+                    valid_options = [
+                        "Lifting",
+                        "Squatting",
+                        "Bending",
+                        "Standing",
+                        "Reaching",
+                        "Walking",
+                        "Sitting",
+                        "Kneeling",
+                        "Stair Climbing",
+                        "Seeing",
+                        "Using Hands",
+                        "Remembering",
+                        "Completing Tasks",
+                        "Concentrating",
+                        "Understanding",
+                        "Following Instructions",
+                        "Getting Along With Others",
+                        "Handling Stress",
+                        "Handling Changes In Routine",
+                        "None",
+                    ]
+
+                    if isinstance(value, list):
+                        target_dict[key] = [v for v in value if v in valid_options]
+                    else:
+                        target_dict[key] = []
+
+                else:
+                    target_dict[key] = value
 
         st.session_state[extracted_key] = {}
         st.session_state[done_key] = True
