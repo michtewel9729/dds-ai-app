@@ -2441,19 +2441,6 @@ def client_guided_mode():
                         st.warning("No transcript was created. Please try again.")
                         st.write("Debug: transcript value was:", transcript)
 
-    rule = AI_EXTRACTION_RULES.get(question.get("key"))
-
-    if rule and rule.get("target_state_key") == state_key:
-        done_key = f"{unique_key}_{rule['done_suffix']}"
-
-        show_extraction_suggestions(
-            title=rule["message"],
-            extracted_key=rule["extracted_key"],
-            done_key=done_key,
-            target_dict=st.session_state[state_key],
-            completed_flag_key=rule.get("completed_flag_key"),
-        )
-
     with st.expander("💬 Need help with this question?"):
         help_question = st.text_input(
             "Ask a question about this form question",
@@ -2951,6 +2938,20 @@ def guided_interview_mode(questions, state_key, title):
         answer_for_storage = answer
 
     st.session_state[state_key][question["key"]] = answer_for_storage
+
+
+    rule = AI_EXTRACTION_RULES.get(question.get("key"))
+
+    if rule and rule.get("target_state_key") == state_key:
+        done_key = f"{unique_key}_{rule['done_suffix']}"
+
+        show_extraction_suggestions(
+            title=rule["message"],
+            extracted_key=rule["extracted_key"],
+            done_key=done_key,
+            target_dict=st.session_state[state_key],
+            completed_flag_key=rule.get("completed_flag_key"),
+        )
 
     if question["type"] in ["text", "textarea"]:
         with st.expander("🎤 Prefer to speak your answer?"):
