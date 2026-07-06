@@ -2114,8 +2114,7 @@ def show_cross_form_memory(question, target_dict, widget_key=None):
         ):
             target_dict[question_key] = previous
 
-            if widget_key and widget_key in st.session_state:
-                del st.session_state[widget_key]
+            st.session_state[f"pending_memory_{question_key}"] = previous
 
             st.rerun()
 
@@ -3159,6 +3158,17 @@ def guided_interview_mode(questions, state_key, title):
         current_value = st.session_state[pending_voice_key]
         st.session_state[unique_key] = current_value
         del st.session_state[pending_voice_key]
+
+    pending_memory_key = f"pending_memory_{question['key']}"
+
+    if st.session_state.get(pending_memory_key):
+        current_value = st.session_state[pending_memory_key]
+        st.session_state[state_key][question["key"]] = current_value
+        st.session_state[unique_key] = current_value
+        del st.session_state[pending_memory_key]
+
+
+
 
     answer = render_answer_input(question, current_value, unique_key)
 
