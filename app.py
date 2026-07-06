@@ -2059,7 +2059,6 @@ CROSS_FORM_MEMORY_KEYS = {
 
     # Function Report → same concepts
     "condition_limits_work": "condition_limits",
-    "ability_limitations": "condition_limits",
     "assistive_devices": "assistive_devices",
     "medication_side_effects": "medication_side_effects",
     "daily_routine": "daily_routine",
