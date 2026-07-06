@@ -1803,28 +1803,47 @@ def should_skip_after_autofill(question):
 
 def check_cross_form_contradiction(question, current_answer):
     question_key = question.get("key")
+    current_text = str(current_answer or "").lower().strip()
 
-    if question_key != "condition_limits_work":
+    if not current_text:
         return
-
-    previous_standing = get_memory_answer("standing_walking")
-
-    if not previous_standing:
-        return
-
-    current_text = str(current_answer or "").lower()
 
     standing_words = ["stand", "standing", "walk", "walking"]
 
-    if not any(word in current_text for word in standing_words):
-        return
+    # Direction 1:
+    # Work History standing/walking was answered first,
+    # then Function Report condition limits mentions standing/walking.
+    if question_key == "condition_limits_work":
+        previous_standing = get_memory_answer("standing_walking")
 
-    st.warning(
-        "⚠️ Review possible difference between forms.\n\n"
-        f"**Work History said:** {previous_standing}\n\n"
-        f"**Function Report says:** {current_answer}\n\n"
-        "If both are true, you may want to explain why they are different."
-    )
+        if not previous_standing:
+            return
+
+        if not any(word in current_text for word in standing_words):
+            return
+
+        st.warning(
+            "⚠️ Review possible difference between forms.\n\n"
+            f"**Work History said:** {previous_standing}\n\n"
+            f"**Function Report says:** {current_answer}\n\n"
+            "If both are true, you may want to explain why they are different."
+        )
+
+    # Direction 2:
+    # Function Report condition limits was answered first,
+    # then Work History standing/walking is answered later.
+    if question_key == "standing_walking":
+        previous_condition_limits = get_memory_answer("condition_limits")
+
+        if not previous_condition_limits:
+            return
+
+        st.warning(
+            "⚠️ Review possible difference between forms.\n\n"
+            f"**Function Report said:** {previous_condition_limits}\n\n"
+            f"**Work History says:** {current_answer}\n\n"
+            "If both are true, you may want to explain why they are different."
+        )
 
 
 def needs_time_unit(question, answer):
@@ -2848,6 +2867,9 @@ def client_guided_mode():
 
                 if should_skip_after_autofill(question):
                     next_step = next_guided_step(next_step + 1)
+
+
+                check_cross_form_contradiction(question, answer_to_check)
 
                 remember_current_answer(
                     question,
