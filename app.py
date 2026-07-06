@@ -2379,10 +2379,19 @@ def run_ai_extraction_if_needed(question, answer_text, unique_key, state_key):
         st.rerun()
 
 def client_guided_mode():
+
+
     st.title("DDS AI App")
     st.subheader("Client Guided Work History Interview")
     st.caption(APP_DISCLAIMER)
     st.markdown("---")
+
+    
+    if st.button("← Back to Form Selection"):
+        st.session_state.selected_form = None
+        st.rerun()
+
+
 
     if st.session_state.guided_step == 0:
         job_memory_helper()
@@ -3029,6 +3038,10 @@ def guided_interview_mode(questions, state_key, title):
     st.subheader(title)
     st.caption(APP_DISCLAIMER)
     st.markdown("---")
+
+    if st.button("← Back to Form Selection"):
+        st.session_state.selected_form = None
+        st.rerun()
 
     step_key = f"{state_key}_step"
 
