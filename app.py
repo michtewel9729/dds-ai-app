@@ -1801,6 +1801,30 @@ def should_skip_after_autofill(question):
     return False
 
 
+def check_cross_form_contradiction(question, current_answer):
+    question_key = question.get("key")
+
+    if question_key != "condition_limits_work":
+        return
+
+    previous_standing = get_memory_answer("standing_walking")
+
+    if not previous_standing:
+        return
+
+    current_text = str(current_answer or "").lower()
+
+    standing_words = ["stand", "standing", "walk", "walking"]
+
+    if not any(word in current_text for word in standing_words):
+        return
+
+    st.warning(
+        "⚠️ Review possible difference between forms.\n\n"
+        f"**Work History said:** {previous_standing}\n\n"
+        f"**Function Report says:** {current_answer}\n\n"
+        "If both are true, you may want to explain why they are different."
+    )
 
 
 def needs_time_unit(question, answer):
@@ -3195,6 +3219,11 @@ def guided_interview_mode(questions, state_key, title):
         question,
         st.session_state[state_key],
         widget_key=unique_key,
+    )
+
+    check_cross_form_contradiction(
+        question,
+        st.session_state[state_key][question["key"]],
     )
 
 
