@@ -2079,7 +2079,7 @@ def remember_current_answer(question, value, source_label=""):
         value,
         source_label=source_label,
     )
-def show_cross_form_memory(question, target_dict):
+def show_cross_form_memory(question, target_dict, widget_key=None):
     question_key = question.get("key")
 
     if question_key not in CROSS_FORM_MEMORY_KEYS:
@@ -2113,6 +2113,10 @@ def show_cross_form_memory(question, target_dict):
             key=f"use_memory_{question_key}",
         ):
             target_dict[question_key] = previous
+
+            if widget_key and widget_key in st.session_state:
+                del st.session_state[widget_key]
+
             st.rerun()
 
     with col2:
@@ -3181,6 +3185,7 @@ def guided_interview_mode(questions, state_key, title):
     show_cross_form_memory(
         question,
         st.session_state[state_key],
+        widget_key=unique_key,
     )
 
 
